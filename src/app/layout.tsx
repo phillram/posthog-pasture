@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PostHog Playground",
-  description: "Interactive PostHog event testing playground",
+  title: "PostHog Pasture",
+  description: "Interactive PostHog event testing pasture",
 };
 
 export default function RootLayout({

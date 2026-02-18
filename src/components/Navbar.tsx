@@ -13,7 +13,7 @@ export default function Navbar() {
       <div className="flex items-center gap-6">
         <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold text-primary hover:text-primary-hover transition-colors">
           <span className="text-2xl">🦔</span>
-          <span>PostHog Playground</span>
+          <span>PostHog Pasture</span>
         </Link>
         {isAuthenticated && (
           <div className="flex items-center gap-4 text-sm">

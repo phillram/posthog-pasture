@@ -30,7 +30,7 @@ export default function SetupPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">🦔 PostHog Playground</h1>
+          <h1 className="text-4xl font-bold text-primary mb-2">🦔 PostHog Pasture</h1>
           <p className="text-muted">
             Configure your PostHog project to get started
           </p>

@@ -1,13 +1,12 @@
 # PostHog Pasture
 
-An interactive playground for exploring and testing the [PostHog](https://posthog.com) JavaScript SDK. Connect your PostHog project, fire events, toggle feature flags, trigger surveys, and inspect everything in real time — all from a single dashboard.
+An interactive pasture for exploring and testing the [PostHog](https://posthog.com) JavaScript SDK. Connect your PostHog project, fire events, toggle feature flags, trigger surveys, and inspect everything in real time — all from a single dashboard.
 
 Built with Next.js 16, React 19, Tailwind CSS 4, and posthog-js.
 
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) v18 or later
-- npm (comes with Node.js)
 - A PostHog account with a **Project API Key** (find it in PostHog → Settings → Project API Key)
 
 ## Getting Started

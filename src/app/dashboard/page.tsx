@@ -143,12 +143,12 @@ export default function DashboardPage() {
 
   const triggerError = () => {
     try {
-      throw new Error("Test error from PostHog Playground");
+      throw new Error("Test error from PostHog Pasture");
     } catch (e) {
       captureException({
         message: (e as Error).message,
         type: "Error",
-        source: "PostHog Playground Dashboard",
+        source: "PostHog Pasture Dashboard",
         stackTrace: (e as Error).stack,
       });
       showToast("Error exception sent", "error");
