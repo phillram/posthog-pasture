@@ -20,6 +20,7 @@ export default function Navbar() {
             <Link href="/dashboard" className="text-muted hover:text-foreground transition-colors">📊 Dashboard</Link>
             <Link href="/event-log" className="text-muted hover:text-foreground transition-colors">📋 Event Log</Link>
             <Link href="/events" className="text-muted hover:text-foreground transition-colors">📖 Event Reference</Link>
+            <Link href="/flags" className="text-muted hover:text-foreground transition-colors">🚩 Flags & Experiments</Link>
             <Link href="/config" className="text-muted hover:text-foreground transition-colors">⚙️ Config</Link>
           </div>
         )}

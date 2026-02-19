@@ -48,6 +48,7 @@ export default function ConfigPage() {
     resetConfig();
     setApiKey("");
     setApiHost("https://us.i.posthog.com");
+    router.push("/");
   };
 
   return (
