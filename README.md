@@ -126,6 +126,36 @@ A complete reference guide to every PostHog event type and SDK method, organized
 
 Each entry includes a description, code example, and a "Fire Event" button to send a demo event.
 
+### Flags & Experiments (`/flags`)
+
+A dedicated page for exploring PostHog feature flags with live hedgehog GIF demos.
+
+#### Hedgehog Feature Flags
+
+Three demo flags that each display a different hedgehog GIF based on their value:
+
+| Flag | Type | Values | Description |
+|------|------|--------|-------------|
+| `hog-spin` | Boolean | `true` / `false` | Shows a spinning hedgehog when enabled |
+| `hog-dance` | Multivariate | `sonic`, `cgi`, `triple` | Each variant shows a different dancing hedgehog |
+| `hog-action` | Multivariate | `run`, `sleep`, `swim` | Each variant shows a hedgehog running, sleeping, or swimming |
+
+- Click variant buttons to override flag values client-side
+- GIFs update instantly to reflect the active variant
+- Uses `posthog.onFeatureFlags()` to wait for flags before rendering
+- Uses `posthog.getFeatureFlag()` and `posthog.isFeatureEnabled()` for evaluation
+
+#### Feature Flags
+- View all flags from your PostHog project with Enabled/Disabled badges
+- Activate/Deactivate boolean flags or Switch multivariate flags
+- Reload Flags from the server or Clear All Overrides
+
+#### Flags Applied to You
+- Shows only flags currently active for your session as green badges
+
+#### Apply Changes
+- Reload the page to apply flag changes across the app
+
 ### Config (`/config`)
 
 Manage your PostHog connection and SDK settings:
