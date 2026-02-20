@@ -90,12 +90,16 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             autocapture: parsed.autocapture ?? true,
             capture_pageview: parsed.capturePageview ?? true,
             capture_pageleave: parsed.capturePageleave ?? true,
+            debug: true,
             disable_session_recording: parsed.disableSessionRecording ?? false,
             loaded: (ph) => {
               if (parsed.debug) ph.debug();
             },
           });
           setIsInitialized(true);
+          if (typeof window !== "undefined") {
+            (window as unknown as Record<string, unknown>).posthog = posthog;
+          }
         }
       } catch {
         // ignore invalid JSON
@@ -125,6 +129,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       setConfig(newConfig);
       localStorage.setItem("posthog_config", JSON.stringify(newConfig));
       setIsInitialized(true);
+      if (typeof window !== "undefined") {
+        (window as unknown as Record<string, unknown>).posthog = posthog;
+      }
       addLog({ type: "config", name: "PostHog Initialized", properties: { apiKey: `${apiKey.slice(0, 8)}...`, apiHost: host } });
     },
     [config, addLog]
