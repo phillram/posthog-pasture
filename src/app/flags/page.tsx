@@ -14,7 +14,7 @@ import HedgehogGif from "@/components/HedgehogGif";
 
 // GIF URLs for each flag variant
 const GIFS = {
-  spin: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3VhaWgzM2Y3bWFtYWJsZG1rZG0xaTQzamdwdTNndnI4Yno2OHZvdiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3xz2BCohVTd7h2Kvfi/giphy.gif",
+  spin: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnFhd2Y2NjlyazY0dHduNWphZHMxN3A0bnA5b3l3Mjhha2Q2c2Q1bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/oNGwPFSB1GPwebIFnb/giphy.gif",
   dance: {
     sonic: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3lqaDZlb3U1aGlwaDh1dThvY2V4bG1jNDlnemRtdzljNDl2MDQwNyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ng2FnI4Mg33bOqGaFO/giphy.gif",
     cgi: "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaDV4YnI0bXNtM2EzNGNkYTRueGYzdzg1ajMwbzlqMWQxYW9kcThlZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/EWIiv7izSd4J51tntS/giphy.gif",
