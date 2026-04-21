@@ -10,7 +10,6 @@ interface PosthogConfig {
   capturePageview: boolean;
   capturePageleave: boolean;
   disableSessionRecording: boolean;
-  debug: boolean;
 }
 
 interface PosthogContextType {
@@ -55,7 +54,6 @@ const defaultConfig: PosthogConfig = {
   capturePageview: true,
   capturePageleave: true,
   disableSessionRecording: false,
-  debug: false,
 };
 
 const PosthogContext = createContext<PosthogContextType | null>(null);
@@ -90,7 +88,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             autocapture: parsed.autocapture ?? true,
             capture_pageview: parsed.capturePageview ?? true,
             capture_pageleave: parsed.capturePageleave ?? true,
-            debug: parsed.debug ?? false,
+            debug: true,
             disable_session_recording: parsed.disableSessionRecording ?? false,
           });
           setIsInitialized(true);
@@ -116,7 +114,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         autocapture: config.autocapture,
         capture_pageview: config.capturePageview,
         capture_pageleave: config.capturePageleave,
-        debug: config.debug,
+        debug: true,
         disable_session_recording: config.disableSessionRecording,
       });
       initRef.current = true;

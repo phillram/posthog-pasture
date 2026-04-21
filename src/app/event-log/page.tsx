@@ -6,18 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
 
-const typeColors: Record<string, string> = {
-  event: "text-primary",
-  identify: "text-accent",
-  pageview: "text-success",
-  group: "text-warning",
-  error: "text-error",
-  config: "text-muted",
-  person: "text-accent",
-  flag: "text-warning",
-  recording: "text-success",
-};
-
 const typeBadgeColors: Record<string, string> = {
   event: "bg-primary/20 text-primary",
   identify: "bg-accent/20 text-accent",

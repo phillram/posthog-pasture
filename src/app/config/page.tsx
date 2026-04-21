@@ -111,7 +111,6 @@ export default function ConfigPage() {
             { label: "Autocapture", key: "autocapture" as const, desc: "Automatically capture clicks, inputs, and form submissions" },
             { label: "Capture Pageview", key: "capturePageview" as const, desc: "Automatically capture $pageview events on page load" },
             { label: "Capture Pageleave", key: "capturePageleave" as const, desc: "Automatically capture $pageleave events" },
-            { label: "Debug Mode", key: "debug" as const, desc: "Log PostHog events to the browser console" },
           ].map(({ label, key, desc }) => (
             <div key={key} className="flex items-center justify-between py-2 border-b border-border/50">
               <div>
