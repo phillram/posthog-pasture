@@ -85,16 +85,13 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         setConfig(parsed);
         if (parsed.apiKey && !initRef.current) {
           initRef.current = true;
-          parsed.apiKey, {
+          posthog.init(parsed.apiKey, {
             api_host: parsed.apiHost || "https://us.i.posthog.com",
             autocapture: parsed.autocapture ?? true,
             capture_pageview: parsed.capturePageview ?? true,
             capture_pageleave: parsed.capturePageleave ?? true,
-            debug: true,
+            debug: parsed.debug ?? false,
             disable_session_recording: parsed.disableSessionRecording ?? false,
-            loaded: (ph) => {
-              if (parsed.debug) ph.debug();
-            },
           });
           setIsInitialized(true);
           if (typeof window !== "undefined") {
@@ -114,15 +111,13 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         posthog.reset();
         initRef.current = false;
       }
-      apiKey, {
+      posthog.init(apiKey, {
         api_host: host,
         autocapture: config.autocapture,
         capture_pageview: config.capturePageview,
         capture_pageleave: config.capturePageleave,
+        debug: config.debug,
         disable_session_recording: config.disableSessionRecording,
-        loaded: (ph) => {
-          if (config.debug) ph.debug();
-        },
       });
       initRef.current = true;
       const newConfig = { ...config, apiKey, apiHost: host };
@@ -278,10 +273,11 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
 
   const reloadFeatureFlags = useCallback(() => {
     if (!isInitialized) return;
-    posthog.reloadFeatureFlags();
-    const flags = posthog.featureFlags.getFlagVariants();
-    setFeatureFlags(flags as Record<string, boolean | string>);
-    addLog({ type: "flag", name: "Feature Flags Reloaded", properties: flags as Record<string, unknown> });
+    posthog.reloadFeatureFlags(() => {
+      const flags = posthog.featureFlags.getFlagVariants();
+      setFeatureFlags(flags as Record<string, boolean | string>);
+      addLog({ type: "flag", name: "Feature Flags Reloaded", properties: flags as Record<string, unknown> });
+    });
   }, [isInitialized, addLog]);
 
   const startSessionRecording = useCallback(() => {
