@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { identifyUser, captureEvent, resetPerson, isInitialized } = usePosthog();
+  const { identifyUser, captureEvent, resetPerson, reloadFeatureFlags, isInitialized } = usePosthog();
 
   useEffect(() => {
     const saved = localStorage.getItem("posthog_user");
@@ -64,9 +64,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
       captureEvent("user_logged_in", { method: isEmail ? "email" : "username", username });
+      reloadFeatureFlags();
       return true;
     },
-    [captureEvent]
+    [captureEvent, reloadFeatureFlags]
   );
 
   const register = useCallback(
@@ -98,7 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
     localStorage.setItem("posthog_user", JSON.stringify(u));
     captureEvent("user_logged_in", { method: "guest", guest_id: guestId });
-  }, [captureEvent, resetPerson]);
+    reloadFeatureFlags();
+  }, [captureEvent, resetPerson, reloadFeatureFlags]);
 
   const logout = useCallback(() => {
     captureEvent("user_logged_out", { user_id: user?.id });

@@ -85,7 +85,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         setConfig(parsed);
         if (parsed.apiKey && !initRef.current) {
           initRef.current = true;
-          posthog.init(parsed.apiKey, {
+          parsed.apiKey, {
             api_host: parsed.apiHost || "https://us.i.posthog.com",
             autocapture: parsed.autocapture ?? true,
             capture_pageview: parsed.capturePageview ?? true,
@@ -114,7 +114,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         posthog.reset();
         initRef.current = false;
       }
-      posthog.init(apiKey, {
+      apiKey, {
         api_host: host,
         autocapture: config.autocapture,
         capture_pageview: config.capturePageview,
