@@ -95,9 +95,15 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             loaded: (ph) => {
               ph.onFeatureFlags(() => {
                 const flags = ph.featureFlags.getFlagVariants();
-                // Evaluate each flag individually to fire $feature_flag_called,
-                // which PostHog requires for experiment exposure tracking.
-                Object.keys(flags).forEach((key) => ph.getFeatureFlag(key));
+                // Capture $feature_flag_called for each flag so PostHog can
+                // calculate experiment exposure. Each event must name one flag —
+                // there is no single-call API for this in the PostHog SDK.
+                Object.entries(flags).forEach(([key, value]) =>
+                  ph.capture("$feature_flag_called", {
+                    $feature_flag: key,
+                    $feature_flag_response: value,
+                  })
+                );
                 setFeatureFlags(flags as Record<string, boolean | string>);
                 setFlagsReady(true);
                 addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });

@@ -247,16 +247,46 @@ export default function FlagsPage() {
           </div>
         </section>
 
-        {/* ── Feature Flags ── */}
+        {/* ── Flags Applied to Current User ── */}
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-1 h-6 bg-success rounded-full" />
+            <h2 className="text-lg font-semibold text-foreground">Flags Applied to You</h2>
+          </div>
+          <div className="bg-card border border-success/30 rounded-xl p-6">
+            <p className="text-muted text-xs mb-4">Feature flags currently active for your session.</p>
+            {activeFlags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {activeFlags.map(([key, value]) => (
+                  <span key={key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-success/10 border border-success/20 text-success rounded-lg text-sm font-mono">
+                    <span className="w-1.5 h-1.5 bg-success rounded-full" />
+                    {key}
+                    {typeof value === "string" && <span className="text-success/60">= {value}</span>}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted text-sm text-center py-4">No flags are currently active for your session.</p>
+            )}
+          </div>
+        </section>
+
+        {/* ── All Feature Flags on Project ── */}
         <section>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-1 h-6 bg-primary rounded-full" />
-            <h2 className="text-lg font-semibold text-foreground">Feature Flags</h2>
+            <h2 className="text-lg font-semibold text-foreground">All Feature Flags on Project</h2>
           </div>
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <p className="text-muted text-xs">All feature flags from your PostHog project. Toggle them using client-side overrides.</p>
               <div className="flex gap-2">
+                <button
+                  onClick={() => { window.location.reload(); }}
+                  className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
+                >
+                  Reload Page
+                </button>
                 <button
                   onClick={async () => {
                     const ph = (await import("posthog-js")).default;
@@ -316,43 +346,6 @@ export default function FlagsPage() {
             ) : (
               <p className="text-muted text-sm text-center py-4">No feature flags loaded. Click &quot;Reload Flags&quot; to fetch them.</p>
             )}
-          </div>
-        </section>
-
-        {/* ── Flags Applied to Current User ── */}
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 bg-success rounded-full" />
-            <h2 className="text-lg font-semibold text-foreground">Flags Applied to You</h2>
-          </div>
-          <div className="bg-card border border-success/30 rounded-xl p-6">
-            <p className="text-muted text-xs mb-4">Feature flags currently active for your session.</p>
-            {activeFlags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {activeFlags.map(([key, value]) => (
-                  <span key={key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-success/10 border border-success/20 text-success rounded-lg text-sm font-mono">
-                    <span className="w-1.5 h-1.5 bg-success rounded-full" />
-                    {key}
-                    {typeof value === "string" && <span className="text-success/60">= {value}</span>}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted text-sm text-center py-4">No flags are currently active for your session.</p>
-            )}
-          </div>
-        </section>
-
-        {/* ── Apply Changes ── */}
-        <section>
-          <div className="bg-card border border-border rounded-xl p-6 text-center">
-            <p className="text-muted text-sm mb-4">After toggling flags, reload the page to see changes take effect across the app.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="py-3 px-8 bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg transition-colors text-sm"
-            >
-              Reload Page
-            </button>
           </div>
         </section>
       </main>
