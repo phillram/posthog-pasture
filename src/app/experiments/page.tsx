@@ -28,24 +28,26 @@ function generateUsername(index: number): string {
 // ── Conversion actions ────────────────────────────────────────────────────────
 
 const CONVERSION_ACTIONS = [
-  { label: "Purchase", event: "pasture_purchase", props: { item: "experiment_product", price: 29.99 } },
-  { label: "Sign Up", event: "pasture_signup", props: { source: "experiment" } },
-  { label: "Checkout", event: "pasture_checkout_started", props: { cart_value: 49.99 } },
-  { label: "Feature Used", event: "pasture_feature_used", props: { feature: "experiment_feature" } },
-  { label: "Form Submit", event: "pasture_form_submitted", props: { form_name: "experiment_form" } },
+  { label: "Purchase",     event: "pasture_purchase",         props: { item: "experiment_product", price: 29.99 } },
+  { label: "Sign Up",      event: "pasture_signup",            props: { source: "experiment" } },
+  { label: "Checkout",     event: "pasture_checkout_started",  props: { cart_value: 49.99 } },
+  { label: "Feature Used", event: "pasture_feature_used",      props: { feature: "experiment_feature" } },
+  { label: "Form Submit",  event: "pasture_form_submitted",    props: { form_name: "experiment_form" } },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ExperimentUser {
   username: string;
+  /** Variant returned by PostHog's /decide endpoint for this user */
   variant: string;
   actionCompleted: boolean;
 }
 
 type WizardStep = "configure" | "running" | "results";
 
-const VARIANTS = ["control", "test"] as const;
+// How many /decide calls to fire in parallel (browser allows ~6 per domain)
+const DECIDE_CONCURRENCY = 6;
 
 export default function ExperimentsPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -65,13 +67,14 @@ export default function ExperimentsPage() {
   // Step 3: conversion action
   const [selectedAction, setSelectedAction] = useState(CONVERSION_ACTIONS[0].event);
 
-  // Step 4: conversion %  — randomised on mount
+  // Step 4: conversion % — randomised on mount
   const [conversionPct, setConversionPct] = useState(
     () => Math.floor(Math.random() * 100) + 1
   );
 
   // Running state
   const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
   const [results, setResults] = useState<ExperimentUser[]>([]);
   const [runError, setRunError] = useState("");
 
@@ -89,10 +92,10 @@ export default function ExperimentsPage() {
 
   // ── Flag classification ──
   const flagNames = Object.keys(featureFlags).sort();
-  // Heuristic: string-valued flags are multivariate → likely experiments
+  // Heuristic: string-valued flags are multivariate → likely linked to experiments
   const experimentFlagNames = flagNames.filter((k) => typeof featureFlags[k] === "string");
   const boolFlagNames = flagNames.filter((k) => typeof featureFlags[k] === "boolean");
-  // If no string flags exist, fall back to showing everything
+  // Fall back to showing all if no multivariate flags are present
   const visibleFlags = (showAllFlags || experimentFlagNames.length === 0) ? flagNames : experimentFlagNames;
 
   const actionInfo = CONVERSION_ACTIONS.find((a) => a.event === selectedAction) || CONVERSION_ACTIONS[0];
@@ -103,6 +106,9 @@ export default function ExperimentsPage() {
     if (!selectedFlag) return;
 
     setRunError("");
+    setProgressLabel("Evaluating flags…");
+    setStep("running");
+    setProgress(0);
 
     captureEvent("pasture_experiment_started", {
       flag: selectedFlag,
@@ -112,22 +118,64 @@ export default function ExperimentsPage() {
       triggered_by: user?.id,
     });
 
-    setStep("running");
-    setProgress(0);
+    // Pre-generate all usernames and conversion outcomes up front so we can
+    // reference them stably across the async decide calls.
+    const now = new Date();
+    const plan: Array<{ username: string; actionCompleted: boolean; ts: string }> =
+      Array.from({ length: userCount }, (_, i) => ({
+        username: generateUsername(i),
+        // Determine NOW whether this user will convert — independent of variant
+        actionCompleted: Math.random() * 100 < conversionPct,
+        // Stagger timestamps so PostHog preserves event order
+        ts: new Date(now.getTime() + i * 100).toISOString(),
+      }));
 
+    // ── Phase 1: Call /decide for each user to get their actual flag variant ──
+    // PostHog evaluates the rollout rules against the distinct_id — this is the
+    // real assignment, not something we pick ourselves.
+    const variants: (string | boolean)[] = new Array(userCount).fill(false);
+    const decideUrl = `${config.apiHost}/decide?v=3`;
+
+    let evaluated = 0;
+    for (let i = 0; i < userCount; i += DECIDE_CONCURRENCY) {
+      const chunk = plan.slice(i, i + DECIDE_CONCURRENCY);
+      await Promise.all(
+        chunk.map(async ({ username }, j) => {
+          try {
+            const res = await fetch(decideUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                token: config.apiKey,
+                distinct_id: username,
+                groups: {},
+              }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              variants[i + j] = data.featureFlags?.[selectedFlag] ?? false;
+            }
+          } catch {
+            // If decide fails for a user, keep false (flag off)
+          }
+        })
+      );
+      evaluated = Math.min(i + DECIDE_CONCURRENCY, userCount);
+      setProgress(Math.round((evaluated / userCount) * 70)); // 0–70% = decide phase
+      setProgressLabel(`Evaluating flags… (${evaluated}/${userCount})`);
+      await new Promise((r) => setTimeout(r, 0)); // yield to React
+    }
+
+    // ── Phase 2: Build the batch payload ──
+    setProgressLabel("Building event batch…");
     const generated: ExperimentUser[] = [];
     const batchEvents: Record<string, unknown>[] = [];
-    const now = new Date();
 
     for (let i = 0; i < userCount; i++) {
-      const username = generateUsername(i);
-      // Distribute evenly across control / test
-      const variant = VARIANTS[i % VARIANTS.length];
-      const actionCompleted = Math.random() * 100 < conversionPct;
-      // Stagger timestamps so events appear in correct order in PostHog
-      const ts = new Date(now.getTime() + i * 100).toISOString();
+      const { username, actionCompleted, ts } = plan[i];
+      const variant = String(variants[i]);
 
-      // 1. $identify — creates the person in PostHog with distinct identity
+      // Step 2: Identify the user in PostHog
       batchEvents.push({
         event: "$identify",
         distinct_id: username,
@@ -137,18 +185,18 @@ export default function ExperimentsPage() {
         },
       });
 
-      // 2. $feature_flag_called — records experiment exposure
+      // Step 3: Record flag exposure with the variant PostHog assigned
       batchEvents.push({
         event: "$feature_flag_called",
         distinct_id: username,
         timestamp: ts,
         properties: {
           $feature_flag: selectedFlag,
-          $feature_flag_response: variant,
+          $feature_flag_response: variants[i],
         },
       });
 
-      // 3. Conversion event — only for users who convert at the target rate
+      // Step 4: Fire the conversion event for users who convert
       if (actionCompleted) {
         batchEvents.push({
           event: actionInfo.event,
@@ -157,22 +205,21 @@ export default function ExperimentsPage() {
           properties: {
             ...actionInfo.props,
             experiment_flag: selectedFlag,
-            variant,
+            $feature_flag: selectedFlag,
+            $feature_flag_response: variants[i],
           },
         });
       }
 
       generated.push({ username, variant, actionCompleted });
-
-      // Yield to React every 10 users to update the progress bar
-      if (i % 10 === 9 || i === userCount - 1) {
-        setProgress(Math.round(((i + 1) / userCount) * 100));
-        await new Promise((r) => setTimeout(r, 0));
-      }
     }
 
-    // Send all events in a single batch — each event has its own distinct_id
-    // so the real logged-in user's session is never touched.
+    setProgress(80);
+    setProgressLabel("Sending batch to PostHog…");
+    await new Promise((r) => setTimeout(r, 0));
+
+    // ── Phase 3: Send all events in a single batch request ──
+    // Each event has its own distinct_id — the real logged-in session is never touched.
     try {
       const res = await fetch(`${config.apiHost}/batch/`, {
         method: "POST",
@@ -190,6 +237,7 @@ export default function ExperimentsPage() {
       setRunError(`Network error sending batch: ${(err as Error).message}`);
     }
 
+    setProgress(100);
     setResults(generated);
 
     captureEvent("pasture_experiment_completed", {
@@ -220,12 +268,12 @@ export default function ExperimentsPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">🧪 Experiments</h1>
             <p className="text-muted text-sm">
-              Generate realistic experiment data — identify simulated users, assign variants, and fire conversion events directly via the PostHog batch API.
+              Generate realistic experiment data. PostHog assigns each simulated user their variant via the decide API — no manual assignment.
             </p>
           </div>
           {step !== "configure" && (
             <button
-              onClick={() => { setStep("configure"); setResults([]); setProgress(0); setRunError(""); }}
+              onClick={() => { setStep("configure"); setResults([]); setProgress(0); setRunError(""); setProgressLabel(""); }}
               className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
             >
               ← New Experiment
@@ -250,7 +298,8 @@ export default function ExperimentsPage() {
                 <h2 className="text-base font-semibold text-foreground">Select a feature flag</h2>
               </div>
               <p className="text-muted text-xs mb-3 ml-9">
-                Multivariate flags (string values) are shown by default — these are associated with experiments.
+                Multivariate flags (string values) are shown by default — these are typically linked to experiments.
+                PostHog will evaluate each flag per user using its own rollout rules.
               </p>
 
               {!flagsReady ? (
@@ -261,7 +310,7 @@ export default function ExperimentsPage() {
                 <>
                   {experimentFlagNames.length === 0 && (
                     <div className="ml-9 mb-3 p-3 bg-warning/10 border border-warning/20 rounded-lg text-xs text-warning">
-                      No multivariate flags found — showing all flags. Multivariate flags (string variants) are typically linked to experiments.
+                      No multivariate flags found — showing all flags. Multivariate flags (string variants like &ldquo;control&rdquo;, &ldquo;test&rdquo;) are typically linked to experiments.
                     </div>
                   )}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 ml-9">
@@ -281,9 +330,7 @@ export default function ExperimentsPage() {
                           <span className="flex items-center gap-1.5 flex-wrap">
                             {key}
                             <span className={`text-xs px-1.5 py-0.5 rounded font-sans ${
-                              isExperiment
-                                ? "bg-warning/20 text-warning"
-                                : "bg-muted/20 text-muted"
+                              isExperiment ? "bg-warning/20 text-warning" : "bg-muted/20 text-muted"
                             }`}>
                               {isExperiment ? "🧪 Exp" : "🚩 Flag"}
                             </span>
@@ -296,7 +343,6 @@ export default function ExperimentsPage() {
                     })}
                   </div>
 
-                  {/* Toggle boolean flags */}
                   {experimentFlagNames.length > 0 && boolFlagNames.length > 0 && (
                     <button
                       onClick={() => setShowAllFlags((v) => !v)}
@@ -340,7 +386,9 @@ export default function ExperimentsPage() {
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-muted mt-2 ml-9">Max 500 users. Users are distributed evenly as <code className="font-mono">control</code> / <code className="font-mono">test</code>.</p>
+              <p className="text-xs text-muted mt-2 ml-9">
+                Max 500 users. Variants are assigned by PostHog based on each user&apos;s distinct ID.
+              </p>
             </section>
 
             {/* Step 3: Conversion action */}
@@ -349,7 +397,7 @@ export default function ExperimentsPage() {
                 <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
                 <h2 className="text-base font-semibold text-foreground">Conversion action</h2>
               </div>
-              <p className="text-muted text-xs mb-3 ml-9">The event fired for users who convert. Hover for the event name.</p>
+              <p className="text-muted text-xs mb-3 ml-9">The event fired for users who convert. Hover for the full event name.</p>
               <div className="flex flex-wrap gap-1.5 ml-9">
                 {CONVERSION_ACTIONS.map((action) => (
                   <button
@@ -379,7 +427,7 @@ export default function ExperimentsPage() {
                 Percentage of simulated users who complete the conversion action. Defaults to a random value — override if needed.
               </p>
               <div className="flex items-center gap-4 ml-9">
-                <div className="relative flex items-center">
+                <div className="flex items-center">
                   <input
                     type="number"
                     min={1}
@@ -415,8 +463,8 @@ export default function ExperimentsPage() {
                   <p className="font-mono text-foreground mt-0.5">{selectedFlag || <span className="text-error text-xs">Not selected</span>}</p>
                 </div>
                 <div>
-                  <p className="text-muted text-xs">Variants</p>
-                  <p className="font-mono text-foreground mt-0.5">control / test (50 / 50)</p>
+                  <p className="text-muted text-xs">Variant assignment</p>
+                  <p className="text-foreground mt-0.5 text-xs">PostHog decide API (per user)</p>
                 </div>
                 <div>
                   <p className="text-muted text-xs">Simulated users</p>
@@ -452,24 +500,27 @@ export default function ExperimentsPage() {
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-1">Running experiment…</h2>
               <p className="text-muted text-sm">
-                Building event batch for <code className="font-mono text-primary">{selectedFlag}</code>
+                {progressLabel || `Processing flag `}
+                <code className="font-mono text-primary">{selectedFlag}</code>
               </p>
             </div>
             <div className="w-full max-w-sm">
               <div className="flex justify-between text-xs text-muted mb-1">
-                <span>Progress</span>
+                <span>{progressLabel || "Working…"}</span>
                 <span>{progress}%</span>
               </div>
               <div className="w-full h-3 bg-input-bg rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full transition-all duration-150"
+                  className="h-full bg-primary rounded-full transition-all duration-200"
                   style={{ width: `${progress}%` }}
                 />
               </div>
             </div>
-            <p className="text-muted text-xs">
-              Sending {userCount} users via PostHog batch API — your session is unaffected.
-            </p>
+            <div className="text-muted text-xs space-y-1">
+              <p>Phase 1 (0–70%): PostHog evaluates each user&apos;s flag variant via <code className="font-mono">/decide</code></p>
+              <p>Phase 2 (70–80%): Building event batch</p>
+              <p>Phase 3 (80–100%): Sending to PostHog via <code className="font-mono">/batch/</code></p>
+            </div>
           </div>
         )}
 
@@ -485,10 +536,10 @@ export default function ExperimentsPage() {
             )}
 
             {/* Flag used */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-card border border-primary/20 rounded-xl">
+            <div className="flex items-center gap-3 px-4 py-3 bg-card border border-primary/20 rounded-xl flex-wrap">
               <span className="text-muted text-sm">Experiment flag:</span>
               <code className="font-mono text-primary font-semibold">{selectedFlag}</code>
-              <span className="text-muted text-xs">· {userCount} users · {conversionPct}% target conversion</span>
+              <span className="text-muted text-xs">· {userCount} users · {conversionPct}% target conversion · variants assigned by PostHog</span>
             </div>
 
             {/* Stats row */}
@@ -511,25 +562,30 @@ export default function ExperimentsPage() {
               </div>
             </div>
 
-            {/* Per-variant breakdown */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Variant breakdown</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {VARIANTS.map((v) => {
-                  const group = results.filter((u) => u.variant === v);
-                  const converted = group.filter((u) => u.actionCompleted).length;
-                  return (
-                    <div key={v} className="bg-input-bg border border-border rounded-lg p-3">
-                      <p className="font-mono text-sm text-foreground font-medium">{v}</p>
-                      <p className="text-xs text-muted mt-1">{group.length} users · {converted} converted</p>
-                      <p className="text-xs font-semibold text-primary mt-0.5">
-                        {group.length > 0 ? `${Math.round((converted / group.length) * 100)}%` : "—"}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {/* Per-variant breakdown — dynamic, based on whatever PostHog returned */}
+            {(() => {
+              const uniqueVariants = [...new Set(results.map((u) => u.variant))].sort();
+              return (
+                <div className="bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Variant breakdown</h3>
+                  <div className={`grid gap-3 ${uniqueVariants.length <= 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                    {uniqueVariants.map((v) => {
+                      const group = results.filter((u) => u.variant === v);
+                      const converted = group.filter((u) => u.actionCompleted).length;
+                      return (
+                        <div key={v} className="bg-input-bg border border-border rounded-lg p-3">
+                          <p className="font-mono text-sm text-foreground font-medium">{v}</p>
+                          <p className="text-xs text-muted mt-1">{group.length} users · {converted} converted</p>
+                          <p className="text-xs font-semibold text-primary mt-0.5">
+                            {group.length > 0 ? `${Math.round((converted / group.length) * 100)}%` : "—"}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Results table */}
             <div className="bg-card border border-border rounded-xl p-6">
@@ -544,12 +600,12 @@ export default function ExperimentsPage() {
                   View in PostHog →
                 </a>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
                 <table className="w-full text-sm">
-                  <thead>
+                  <thead className="sticky top-0 bg-card">
                     <tr className="border-b border-border">
                       <th className="text-left text-xs text-muted font-semibold pb-2 pr-4">Username</th>
-                      <th className="text-left text-xs text-muted font-semibold pb-2 pr-4">Variant</th>
+                      <th className="text-left text-xs text-muted font-semibold pb-2 pr-4">Variant (PostHog)</th>
                       <th className="text-left text-xs text-muted font-semibold pb-2">{actionInfo.label}</th>
                     </tr>
                   </thead>
@@ -561,7 +617,9 @@ export default function ExperimentsPage() {
                           <span className={`px-2 py-0.5 text-xs rounded font-mono ${
                             u.variant === "control"
                               ? "bg-muted/20 text-muted"
-                              : "bg-accent/10 text-accent"
+                              : u.variant === "false"
+                                ? "bg-error/10 text-error/60"
+                                : "bg-accent/10 text-accent"
                           }`}>
                             {u.variant}
                           </span>
