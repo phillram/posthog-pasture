@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -31,16 +31,8 @@ const FLAG_KEYS = ["hog-spin", "hog-dance", "hog-action"] as const;
 
 export default function FlagsPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { featureFlags, reloadFeatureFlags, addLog, isInitialized, config } = usePosthog();
+  const { featureFlags, flagsReady, reloadFeatureFlags, addLog, isInitialized, config } = usePosthog();
   const router = useRouter();
-
-  // Flag values: false = off, true = on (boolean), or a string variant
-  const [flagValues, setFlagValues] = useState<Record<string, boolean | string>>({
-    "hog-spin": false,
-    "hog-dance": false,
-    "hog-action": false,
-  });
-  const [flagsReady, setFlagsReady] = useState(false);
 
   const [toasts, setToasts] = useState<{ id: string; message: string; type: "success" | "error" | "info" }[]>([]);
   const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
@@ -49,65 +41,16 @@ export default function FlagsPage() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2500);
   }, []);
 
-  // Auth guard
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.push("/login");
-  }, [isAuthenticated, isLoading, router]);
-
-  // API key guard
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && !config.apiKey) router.push("/");
-  }, [isLoading, isAuthenticated, config.apiKey, router]);
-
-  // Wait for PostHog feature flags to be ready, then read values
-  useEffect(() => {
-    let cancelled = false;
-    const init = async () => {
-      const ph = (await import("posthog-js")).default;
-      ph.onFeatureFlags(function () {
-        if (cancelled) return;
-        const values: Record<string, boolean | string> = {};
-        for (const key of FLAG_KEYS) {
-          const val = ph.getFeatureFlag(key);
-          values[key] = val === undefined ? false : val;
-        }
-        setFlagValues(values);
-        setFlagsReady(true);
-        addLog({ type: "flag", name: "Hedgehog Flags Evaluated", properties: values });
-      });
-    };
-    init();
-    return () => { cancelled = true; };
-  }, [addLog]);
-
-  // Auto-reload project flags once ready
-  useEffect(() => {
-    if (flagsReady && isInitialized) reloadFeatureFlags();
-  }, [flagsReady, isInitialized, reloadFeatureFlags]);
-
-  // Re-sync when context flags change (after overrides/reloads)
-  useEffect(() => {
-    if (!flagsReady) return;
-    const sync = async () => {
-      const ph = (await import("posthog-js")).default;
-      const values: Record<string, boolean | string> = {};
-      for (const key of FLAG_KEYS) {
-        const val = ph.getFeatureFlag(key);
-        values[key] = val === undefined ? false : val;
-      }
-      setFlagValues(values);
-    };
-    sync();
-  }, [featureFlags, flagsReady]);
-
-  if (isLoading || !isAuthenticated) return null;
+  if (isLoading) return null;
+  if (!isAuthenticated) { router.push("/login"); return null; }
+  if (!config.apiKey) { router.push("/"); return null; }
 
   // ── Override helpers ──
 
   const overrideFlag = async (key: string, value: boolean | string) => {
     const ph = (await import("posthog-js")).default;
     ph.featureFlags.overrideFeatureFlags({ flags: { [key]: value } });
-    setFlagValues((prev) => ({ ...prev, [key]: value }));
+    reloadFeatureFlags();
     addLog({ type: "flag", name: `Flag Override: ${key}`, properties: { flag: key, value } });
     showToast(`"${key}" set to ${String(value)}`);
   };
@@ -136,12 +79,13 @@ export default function FlagsPage() {
 
   // ── Render helpers for each flag card ──
 
-  const hogSpin = flagValues["hog-spin"];
-  const hogDance = flagValues["hog-dance"];
-  const hogAction = flagValues["hog-action"];
+  // Derive hedgehog flag values directly from context state
+  const hogSpin = featureFlags["hog-spin"];
+  const hogDance = featureFlags["hog-dance"];
+  const hogAction = featureFlags["hog-action"];
 
   function renderGifOrPlaceholder(gifUrl: string | null) {
-    if (!flagsReady) {
+    if (isInitialized && !flagsReady) {
       return (
         <div className="flex flex-col items-center gap-2 text-muted">
           <span className="text-4xl animate-pulse">🦔</span>

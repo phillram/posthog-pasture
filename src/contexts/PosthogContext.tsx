@@ -32,6 +32,7 @@ interface PosthogContextType {
   optOut: () => void;
   isOptedOut: boolean;
   featureFlags: Record<string, boolean | string>;
+  flagsReady: boolean;
   reloadFeatureFlags: () => void;
   startSessionRecording: () => void;
   stopSessionRecording: () => void;
@@ -64,6 +65,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
   const [isOptedOut, setIsOptedOut] = useState(false);
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean | string>>({});
+  const [flagsReady, setFlagsReady] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const initRef = useRef(false);
 
@@ -90,6 +92,14 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             capture_pageleave: parsed.capturePageleave ?? true,
             debug: true,
             disable_session_recording: parsed.disableSessionRecording ?? false,
+            loaded: (ph) => {
+              ph.onFeatureFlags(() => {
+                const flags = ph.featureFlags.getFlagVariants();
+                setFeatureFlags(flags as Record<string, boolean | string>);
+                setFlagsReady(true);
+                addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });
+              });
+            },
           });
           setIsInitialized(true);
           if (typeof window !== "undefined") {
@@ -116,6 +126,14 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         capture_pageleave: config.capturePageleave,
         debug: true,
         disable_session_recording: config.disableSessionRecording,
+        loaded: (ph) => {
+          ph.onFeatureFlags(() => {
+            const flags = ph.featureFlags.getFlagVariants();
+            setFeatureFlags(flags as Record<string, boolean | string>);
+            setFlagsReady(true);
+            addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });
+          });
+        },
       });
       initRef.current = true;
       const newConfig = { ...config, apiKey, apiHost: host };
@@ -151,6 +169,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     }
     setConfig(defaultConfig);
     setIsInitialized(false);
+    setFlagsReady(false);
+    setFeatureFlags({});
     localStorage.removeItem("posthog_config");
     addLog({ type: "config", name: "Config Reset" });
   }, [addLog]);
@@ -271,12 +291,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
 
   const reloadFeatureFlags = useCallback(() => {
     if (!isInitialized) return;
-    posthog.reloadFeatureFlags(() => {
-      const flags = posthog.featureFlags.getFlagVariants();
-      setFeatureFlags(flags as Record<string, boolean | string>);
-      addLog({ type: "flag", name: "Feature Flags Reloaded", properties: flags as Record<string, unknown> });
-    });
-  }, [isInitialized, addLog]);
+    posthog.reloadFeatureFlags();
+  }, [isInitialized]);
 
   const startSessionRecording = useCallback(() => {
     if (!isInitialized) return;
@@ -314,6 +330,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         optOut,
         isOptedOut,
         featureFlags,
+        flagsReady,
         reloadFeatureFlags,
         startSessionRecording,
         stopSessionRecording,

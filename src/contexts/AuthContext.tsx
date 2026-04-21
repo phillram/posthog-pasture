@@ -40,15 +40,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  // Identify user whenever they're set and posthog is ready (skip guests)
+  // Identify user whenever they're set and posthog is ready (skip guests),
+  // then reload feature flags so they're evaluated for the identified user.
   useEffect(() => {
     if (user && !user.isGuest && isInitialized) {
       identifyUser(user.id, {
         email: user.email,
         name: user.name,
       });
+      reloadFeatureFlags();
     }
-  }, [user, isInitialized, identifyUser]);
+  }, [user, isInitialized, identifyUser, reloadFeatureFlags]);
 
   const login = useCallback(
     (usernameOrEmail: string, password: string) => {
@@ -64,10 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
       captureEvent("user_logged_in", { method: isEmail ? "email" : "username", username });
-      reloadFeatureFlags();
       return true;
     },
-    [captureEvent, reloadFeatureFlags]
+    [captureEvent]
   );
 
   const register = useCallback(

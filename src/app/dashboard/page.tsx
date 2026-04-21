@@ -24,6 +24,7 @@ export default function DashboardPage() {
     startSessionRecording,
     stopSessionRecording,
     featureFlags,
+    flagsReady,
     reloadFeatureFlags,
     addLog,
   } = usePosthog();
@@ -89,6 +90,20 @@ export default function DashboardPage() {
   }, [isAuthenticated, isLoading, router]);
 
   if (isLoading || !isAuthenticated) return null;
+
+  if (isInitialized && !flagsReady) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center space-y-3">
+            <div className="text-5xl animate-pulse">🦔</div>
+            <p className="text-muted text-sm">Loading feature flags...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleCustomEvent = () => {
     if (!customEventName.trim()) return;
