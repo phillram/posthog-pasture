@@ -95,6 +95,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             loaded: (ph) => {
               ph.onFeatureFlags(() => {
                 const flags = ph.featureFlags.getFlagVariants();
+                // Evaluate each flag individually to fire $feature_flag_called,
+                // which PostHog requires for experiment exposure tracking.
+                Object.keys(flags).forEach((key) => ph.getFeatureFlag(key));
                 setFeatureFlags(flags as Record<string, boolean | string>);
                 setFlagsReady(true);
                 addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });
@@ -129,6 +132,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         loaded: (ph) => {
           ph.onFeatureFlags(() => {
             const flags = ph.featureFlags.getFlagVariants();
+            // Evaluate each flag individually to fire $feature_flag_called,
+            // which PostHog requires for experiment exposure tracking.
+            Object.keys(flags).forEach((key) => ph.getFeatureFlag(key));
             setFeatureFlags(flags as Record<string, boolean | string>);
             setFlagsReady(true);
             addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });
