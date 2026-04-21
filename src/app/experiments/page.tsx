@@ -296,10 +296,25 @@ export default function ExperimentsPage() {
               <div className="flex items-center gap-3 mb-3">
                 <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
                 <h2 className="text-base font-semibold text-foreground">Select a feature flag</h2>
+                {flagsReady && experimentFlagNames.length > 0 && boolFlagNames.length > 0 && (
+                  <button
+                    onClick={() => setShowAllFlags((v) => !v)}
+                    className={`ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
+                      showAllFlags
+                        ? "bg-warning/20 border-warning/40 text-warning hover:bg-warning/30"
+                        : "bg-input-bg border-border text-muted hover:border-primary/50 hover:text-foreground"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${showAllFlags ? "bg-warning" : "bg-muted"}`} />
+                    {showAllFlags
+                      ? `All flags (${flagNames.length})`
+                      : `Experiment flags only (${experimentFlagNames.length})`}
+                  </button>
+                )}
               </div>
               <p className="text-muted text-xs mb-3 ml-9">
-                Multivariate flags (string values) are shown by default — these are typically linked to experiments.
-                PostHog will evaluate each flag per user using its own rollout rules.
+                Multivariate flags are shown by default — these are typically linked to experiments.
+                PostHog evaluates each flag per user using its own rollout rules.
               </p>
 
               {!flagsReady ? (
@@ -313,7 +328,7 @@ export default function ExperimentsPage() {
                       No multivariate flags found — showing all flags. Multivariate flags (string variants like &ldquo;control&rdquo;, &ldquo;test&rdquo;) are typically linked to experiments.
                     </div>
                   )}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 ml-9">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 ml-9">
                     {visibleFlags.map((key) => {
                       const val = featureFlags[key];
                       const isExperiment = typeof val === "string";
@@ -321,38 +336,24 @@ export default function ExperimentsPage() {
                         <button
                           key={key}
                           onClick={() => setSelectedFlag(key)}
-                          className={`px-3 py-2.5 rounded-lg border text-sm font-mono text-left transition-colors ${
+                          className={`px-2 py-1.5 rounded-lg border text-xs font-mono text-left transition-colors ${
                             selectedFlag === key
                               ? "bg-primary/20 border-primary text-primary"
                               : "bg-input-bg border-border text-foreground hover:border-primary/50"
                           }`}
                         >
-                          <span className="flex items-center gap-1.5 flex-wrap">
-                            {key}
-                            <span className={`text-xs px-1.5 py-0.5 rounded font-sans ${
+                          <span className="flex items-center gap-1 flex-wrap leading-tight">
+                            <span className="truncate max-w-full">{key}</span>
+                            <span className={`text-xs px-1 py-0 rounded font-sans shrink-0 ${
                               isExperiment ? "bg-warning/20 text-warning" : "bg-muted/20 text-muted"
                             }`}>
-                              {isExperiment ? "🧪 Exp" : "🚩 Flag"}
+                              {isExperiment ? "🧪" : "🚩"}
                             </span>
-                          </span>
-                          <span className="block text-xs text-muted font-sans mt-0.5">
-                            {typeof val === "boolean" ? (val ? "true" : "false") : String(val || "—")}
                           </span>
                         </button>
                       );
                     })}
                   </div>
-
-                  {experimentFlagNames.length > 0 && boolFlagNames.length > 0 && (
-                    <button
-                      onClick={() => setShowAllFlags((v) => !v)}
-                      className="mt-3 ml-9 text-xs text-muted hover:text-foreground transition-colors underline"
-                    >
-                      {showAllFlags
-                        ? "Show experiment flags only"
-                        : `Also show ${boolFlagNames.length} boolean flag${boolFlagNames.length !== 1 ? "s" : ""}`}
-                    </button>
-                  )}
                 </>
               )}
             </section>
@@ -391,36 +392,10 @@ export default function ExperimentsPage() {
               </p>
             </section>
 
-            {/* Step 3: Conversion action */}
+            {/* Step 3: Conversion rate */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
                 <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
-                <h2 className="text-base font-semibold text-foreground">Conversion action</h2>
-              </div>
-              <p className="text-muted text-xs mb-3 ml-9">The event fired for users who convert. Hover for the full event name.</p>
-              <div className="flex flex-wrap gap-1.5 ml-9">
-                {CONVERSION_ACTIONS.map((action) => (
-                  <button
-                    key={action.event}
-                    onClick={() => setSelectedAction(action.event)}
-                    title={action.event}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                      selectedAction === action.event
-                        ? "bg-success/20 border-success text-success"
-                        : "bg-input-bg border-border text-foreground hover:border-success/50"
-                    }`}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted mt-2 ml-9 font-mono">{actionInfo.event}</p>
-            </section>
-
-            {/* Step 4: Conversion rate */}
-            <section className="bg-card border border-border rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">4</span>
                 <h2 className="text-base font-semibold text-foreground">Conversion rate</h2>
               </div>
               <p className="text-muted text-xs mb-3 ml-9">
@@ -454,6 +429,36 @@ export default function ExperimentsPage() {
               </div>
             </section>
 
+            {/* Step 4: Conversion action */}
+            <section className="bg-card border border-border rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">4</span>
+                <h2 className="text-base font-semibold text-foreground">Conversion action</h2>
+              </div>
+              <p className="text-muted text-xs mb-3 ml-9">The event fired for users who convert.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 ml-9">
+                {CONVERSION_ACTIONS.map((action) => (
+                  <button
+                    key={action.event}
+                    onClick={() => setSelectedAction(action.event)}
+                    className={`px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                      selectedAction === action.event
+                        ? "bg-success/20 border-success text-success"
+                        : "bg-input-bg border-border text-foreground hover:border-success/50"
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{action.label}</span>
+                    <span className={`block text-xs font-mono mt-0.5 ${selectedAction === action.event ? "text-success/80" : "text-muted"}`}>
+                      {action.event}
+                    </span>
+                    <span className={`block text-xs mt-0.5 ${selectedAction === action.event ? "text-success/70" : "text-muted/70"}`}>
+                      {JSON.stringify(action.props)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
             {/* Summary + Start */}
             <div className="bg-card border border-primary/30 rounded-xl p-6">
               <h3 className="text-sm font-semibold text-foreground mb-3">Summary</h3>
@@ -463,20 +468,16 @@ export default function ExperimentsPage() {
                   <p className="font-mono text-foreground mt-0.5">{selectedFlag || <span className="text-error text-xs">Not selected</span>}</p>
                 </div>
                 <div>
-                  <p className="text-muted text-xs">Variant assignment</p>
-                  <p className="text-foreground mt-0.5 text-xs">PostHog decide API (per user)</p>
-                </div>
-                <div>
                   <p className="text-muted text-xs">Simulated users</p>
                   <p className="font-mono text-foreground mt-0.5">{userCount}</p>
                 </div>
                 <div>
-                  <p className="text-muted text-xs">Action</p>
-                  <p className="font-mono text-foreground mt-0.5">{actionInfo.label}</p>
-                </div>
-                <div>
                   <p className="text-muted text-xs">Conversion rate</p>
                   <p className="font-mono text-foreground mt-0.5">{conversionPct}%</p>
+                </div>
+                <div>
+                  <p className="text-muted text-xs">Action</p>
+                  <p className="font-mono text-foreground mt-0.5">{actionInfo.event}</p>
                 </div>
               </div>
               <button
