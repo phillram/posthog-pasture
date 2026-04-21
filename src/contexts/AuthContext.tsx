@@ -14,9 +14,9 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (usernameOrEmail: string, password: string) => boolean;
-  register: (email: string, name: string, password: string) => boolean;
-  loginAsGuest: () => void;
+  login: (usernameOrEmail: string, password: string, applyFeatureFlags?: boolean) => boolean;
+  register: (email: string, name: string, password: string, applyFeatureFlags?: boolean) => boolean;
+  loginAsGuest: (applyFeatureFlags?: boolean) => void;
   logout: () => void;
 }
 
@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { identifyUser, captureEvent, resetPerson, reloadFeatureFlags, isInitialized } = usePosthog();
+  const { identifyUser, captureEvent, resetPerson, reloadFeatureFlags, reloadFeatureFlagsAndCapture, isInitialized } = usePosthog();
 
   useEffect(() => {
     const saved = localStorage.getItem("posthog_user");
@@ -40,20 +40,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  // Identify user whenever they're set and posthog is ready (skip guests),
-  // then reload feature flags so they're evaluated for the identified user.
+  // Identify user whenever they're set and posthog is ready (skip guests).
+  // Note: feature flag reloading is triggered manually in login/register to
+  // support the optional applyFeatureFlags behaviour.
   useEffect(() => {
     if (user && !user.isGuest && isInitialized) {
       identifyUser(user.id, {
         email: user.email,
         name: user.name,
       });
-      reloadFeatureFlags();
     }
-  }, [user, isInitialized, identifyUser, reloadFeatureFlags]);
+  }, [user, isInitialized, identifyUser]);
 
   const login = useCallback(
-    (usernameOrEmail: string, password: string) => {
+    (usernameOrEmail: string, password: string, applyFeatureFlags = false) => {
       if (password !== "test") return false;
       const isEmail = usernameOrEmail.includes("@");
       const username = isEmail ? usernameOrEmail.split("@")[0] : usernameOrEmail;
@@ -65,14 +65,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
-      captureEvent("user_logged_in", { method: isEmail ? "email" : "username", username });
+      captureEvent("pasture_user_logged_in", { method: isEmail ? "email" : "username", username });
+      if (applyFeatureFlags) {
+        reloadFeatureFlagsAndCapture();
+      } else {
+        reloadFeatureFlags();
+      }
       return true;
     },
-    [captureEvent]
+    [captureEvent, reloadFeatureFlags, reloadFeatureFlagsAndCapture]
   );
 
   const register = useCallback(
-    (email: string, name: string, _password: string) => {
+    (email: string, name: string, _password: string, applyFeatureFlags = false) => {
       const username = name || email.split("@")[0];
       const u: User = {
         id: username,
@@ -82,13 +87,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
-      captureEvent("user_registered", { method: "email", email, name: username });
+      captureEvent("pasture_user_registered", { method: "email", email, name: username });
+      if (applyFeatureFlags) {
+        reloadFeatureFlagsAndCapture();
+      } else {
+        reloadFeatureFlags();
+      }
       return true;
     },
-    [captureEvent]
+    [captureEvent, reloadFeatureFlags, reloadFeatureFlagsAndCapture]
   );
 
-  const loginAsGuest = useCallback(() => {
+  const loginAsGuest = useCallback((applyFeatureFlags = false) => {
     resetPerson();
     const guestId = `guest_${Date.now()}`;
     const u: User = {
@@ -99,12 +109,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setUser(u);
     localStorage.setItem("posthog_user", JSON.stringify(u));
-    captureEvent("user_logged_in", { method: "guest", guest_id: guestId });
-    reloadFeatureFlags();
-  }, [captureEvent, resetPerson, reloadFeatureFlags]);
+    captureEvent("pasture_user_logged_in", { method: "guest", guest_id: guestId });
+    if (applyFeatureFlags) {
+      reloadFeatureFlagsAndCapture();
+    } else {
+      reloadFeatureFlags();
+    }
+  }, [captureEvent, resetPerson, reloadFeatureFlags, reloadFeatureFlagsAndCapture]);
 
   const logout = useCallback(() => {
-    captureEvent("user_logged_out", { user_id: user?.id });
+    captureEvent("pasture_user_logged_out", { user_id: user?.id });
     resetPerson();
     setUser(null);
     localStorage.removeItem("posthog_user");

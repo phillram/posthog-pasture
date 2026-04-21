@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [applyFeatureFlags, setApplyFeatureFlags] = useState(false);
   const { login, loginAsGuest } = useAuth();
   const router = useRouter();
 
@@ -17,7 +18,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (!usernameOrEmail || !password) return;
     setError("");
-    const success = login(usernameOrEmail, password);
+    const success = login(usernameOrEmail, password, applyFeatureFlags);
     if (success) {
       router.push("/dashboard");
     } else {
@@ -26,7 +27,7 @@ export default function LoginPage() {
   };
 
   const handleGuest = () => {
-    loginAsGuest();
+    loginAsGuest(applyFeatureFlags);
     router.push("/dashboard");
   };
 
@@ -63,6 +64,23 @@ export default function LoginPage() {
             <div className="mt-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg">
               <p className="text-xs text-primary">
                 No registration needed! Enter any username and password <code className="bg-input-bg px-1.5 py-0.5 rounded text-primary font-mono font-bold">test</code> to log in instantly.
+              </p>
+            </div>
+          </div>
+
+          {/* Apply feature flags toggle */}
+          <div className="flex items-start gap-3 px-3 py-3 bg-input-bg border border-border rounded-lg">
+            <button
+              type="button"
+              onClick={() => setApplyFeatureFlags((v) => !v)}
+              className={`relative mt-0.5 shrink-0 w-10 h-5 rounded-full transition-colors ${applyFeatureFlags ? "bg-warning" : "bg-muted/30"}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${applyFeatureFlags ? "translate-x-5" : "translate-x-0"}`} />
+            </button>
+            <div>
+              <p className="text-sm font-medium text-foreground">Apply feature flags on login</p>
+              <p className="text-xs text-muted mt-0.5">
+                When enabled, fires <code className="bg-background px-1 rounded font-mono">$feature_flag_called</code> for each flag on login. Useful for experiment exposure tracking.
               </p>
             </div>
           </div>

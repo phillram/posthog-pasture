@@ -34,6 +34,7 @@ interface PosthogContextType {
   featureFlags: Record<string, boolean | string>;
   flagsReady: boolean;
   reloadFeatureFlags: () => void;
+  reloadFeatureFlagsAndCapture: () => void;
   startSessionRecording: () => void;
   stopSessionRecording: () => void;
   isRecording: boolean;
@@ -68,6 +69,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [flagsReady, setFlagsReady] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const initRef = useRef(false);
+  // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
+  const fireFlagEventsRef = useRef(false);
 
   const addLog = useCallback((entry: Omit<EventLogEntry, "id" | "timestamp">) => {
     setEventLog((prev) => [
@@ -95,15 +98,17 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             loaded: (ph) => {
               ph.onFeatureFlags(() => {
                 const flags = ph.featureFlags.getFlagVariants();
-                // Capture $feature_flag_called for each flag so PostHog can
-                // calculate experiment exposure. Each event must name one flag —
-                // there is no single-call API for this in the PostHog SDK.
-                Object.entries(flags).forEach(([key, value]) =>
-                  ph.capture("$feature_flag_called", {
-                    $feature_flag: key,
-                    $feature_flag_response: value,
-                  })
-                );
+                // Only fire $feature_flag_called events when explicitly requested
+                // (e.g. when the user logs in with "Apply feature flags" enabled)
+                if (fireFlagEventsRef.current) {
+                  Object.entries(flags).forEach(([key, value]) =>
+                    ph.capture("$feature_flag_called", {
+                      $feature_flag: key,
+                      $feature_flag_response: value,
+                    })
+                  );
+                  fireFlagEventsRef.current = false;
+                }
                 setFeatureFlags(flags as Record<string, boolean | string>);
                 setFlagsReady(true);
                 addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });
@@ -138,9 +143,16 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         loaded: (ph) => {
           ph.onFeatureFlags(() => {
             const flags = ph.featureFlags.getFlagVariants();
-            // Evaluate each flag individually to fire $feature_flag_called,
-            // which PostHog requires for experiment exposure tracking.
-            Object.keys(flags).forEach((key) => ph.getFeatureFlag(key));
+            // Only fire $feature_flag_called events when explicitly requested
+            if (fireFlagEventsRef.current) {
+              Object.entries(flags).forEach(([key, value]) =>
+                ph.capture("$feature_flag_called", {
+                  $feature_flag: key,
+                  $feature_flag_response: value,
+                })
+              );
+              fireFlagEventsRef.current = false;
+            }
             setFeatureFlags(flags as Record<string, boolean | string>);
             setFlagsReady(true);
             addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });
@@ -306,6 +318,13 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     posthog.reloadFeatureFlags();
   }, [isInitialized]);
 
+  // Like reloadFeatureFlags but also fires $feature_flag_called for each flag
+  const reloadFeatureFlagsAndCapture = useCallback(() => {
+    if (!isInitialized) return;
+    fireFlagEventsRef.current = true;
+    posthog.reloadFeatureFlags();
+  }, [isInitialized]);
+
   const startSessionRecording = useCallback(() => {
     if (!isInitialized) return;
     posthog.startSessionRecording();
@@ -344,6 +363,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         featureFlags,
         flagsReady,
         reloadFeatureFlags,
+        reloadFeatureFlagsAndCapture,
         startSessionRecording,
         stopSessionRecording,
         isRecording,

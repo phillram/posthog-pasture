@@ -125,8 +125,8 @@ export default function FlagsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Flags & Experiments</h1>
-            <p className="text-muted text-sm">Toggle feature flags, run experiments, and watch hedgehogs react.</p>
+            <h1 className="text-2xl font-bold text-foreground">Flags</h1>
+            <p className="text-muted text-sm">Toggle feature flags and watch hedgehogs react.</p>
           </div>
           <HedgehogGif index={4} size="sm" />
         </div>

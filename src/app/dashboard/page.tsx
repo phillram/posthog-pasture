@@ -200,7 +200,7 @@ export default function DashboardPage() {
       const result = new Function(`return (${jsCode})`)();
       const output = typeof result === "object" ? JSON.stringify(result, null, 2) : String(result);
       setJsResult(output);
-      captureEvent("js_executed", { code: jsCode, result: output, success: true });
+      captureEvent("pasture_js_executed", { code: jsCode, result: output, success: true });
       showToast("Code executed");
     } catch (e) {
       const errMsg = (e as Error).message;
@@ -239,13 +239,13 @@ export default function DashboardPage() {
     {
       label: "Event Tracking",
       events: [
-        { name: "Button Clicked", event: "button_clicked", props: { button_name: "cta", page: "dashboard" }, color: "bg-primary hover:bg-primary-hover" },
+        { name: "Button Clicked", event: "pasture_button_clicked", props: { button_name: "cta", page: "dashboard" }, color: "bg-primary hover:bg-primary-hover" },
         { name: "Page Viewed", event: "$pageview", props: { $current_url: typeof window !== "undefined" ? window.location.href : "/dashboard" }, color: "bg-success/80 hover:bg-success" },
-        { name: "Feature Used", event: "feature_used", props: { feature: "analytics", duration_ms: 1234 }, color: "bg-accent hover:bg-accent-hover" },
-        { name: "Item Purchased", event: "purchase", props: { item: "hedgehog_plush", price: 29.99, currency: "USD" }, color: "bg-warning/80 hover:bg-warning" },
-        { name: "Form Submitted", event: "form_submitted", props: { form_name: "contact", fields_count: 5 }, color: "bg-blue-600 hover:bg-blue-500" },
-        { name: "Sign Up Started", event: "signup_started", props: { source: "landing_page", variant: "A" }, color: "bg-teal-600 hover:bg-teal-500" },
-        { name: "Search Performed", event: "search", props: { query: "hedgehog care", results_count: 42 }, color: "bg-pink-600 hover:bg-pink-500" },
+        { name: "Feature Used", event: "pasture_feature_used", props: { feature: "analytics", duration_ms: 1234 }, color: "bg-accent hover:bg-accent-hover" },
+        { name: "Item Purchased", event: "pasture_purchase", props: { item: "hedgehog_plush", price: 29.99, currency: "USD" }, color: "bg-warning/80 hover:bg-warning" },
+        { name: "Form Submitted", event: "pasture_form_submitted", props: { form_name: "contact", fields_count: 5 }, color: "bg-blue-600 hover:bg-blue-500" },
+        { name: "Sign Up Started", event: "pasture_signup_started", props: { source: "landing_page", variant: "A" }, color: "bg-teal-600 hover:bg-teal-500" },
+        { name: "Search Performed", event: "pasture_search", props: { query: "hedgehog care", results_count: 42 }, color: "bg-pink-600 hover:bg-pink-500" },
         { name: "Capture Pageview", event: "__capture_pageview", props: {}, color: "bg-success/60 hover:bg-success/80" },
       ],
     },
