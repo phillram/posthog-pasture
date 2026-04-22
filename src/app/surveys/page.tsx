@@ -69,7 +69,13 @@ export default function SurveysPage() {
 
   const visibleSurveys = useMemo(() => {
     const filtered = showAllStatuses ? surveys : surveys.filter((s) => surveyStatus(s) === "running");
-    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    // Sort by status (Running → Complete → Draft → Archived), then alphabetically within each group.
+    const statusOrder: Record<SurveyStatus, number> = { running: 0, completed: 1, draft: 2, archived: 3 };
+    return [...filtered].sort((a, b) => {
+      const diff = statusOrder[surveyStatus(a)] - statusOrder[surveyStatus(b)];
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    });
   }, [surveys, showAllStatuses]);
 
   const statusCounts = useMemo(() => {
