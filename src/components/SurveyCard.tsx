@@ -16,7 +16,6 @@ interface Props {
   survey: Survey;
   onTrigger: (survey: Survey) => void;
   onSubmit: (survey: Survey, responses: ResponseValue[]) => void;
-  onDismiss: (survey: Survey) => void;
 }
 
 function isMultiple(q: SurveyQuestion): q is MultipleSurveyQuestion {
@@ -31,7 +30,7 @@ function isLink(q: SurveyQuestion): q is LinkSurveyQuestion {
   return q.type === "link";
 }
 
-export default function SurveyCard({ survey, onTrigger, onSubmit, onDismiss }: Props) {
+export default function SurveyCard({ survey, onTrigger, onSubmit }: Props) {
   const [showTargeting, setShowTargeting] = useState(false);
   const [responses, setResponses] = useState<ResponseValue[]>(() => survey.questions.map(() => null));
 
@@ -80,12 +79,6 @@ export default function SurveyCard({ survey, onTrigger, onSubmit, onDismiss }: P
               Trigger
             </button>
           )}
-          <button
-            onClick={() => onDismiss(survey)}
-            className="py-1.5 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs"
-          >
-            Dismiss
-          </button>
         </div>
       </div>
 
