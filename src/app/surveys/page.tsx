@@ -130,9 +130,9 @@ export default function SurveysPage() {
                     survey={survey}
                     onTrigger={async (s) => {
                       const ph = (await import("posthog-js")).default;
-                      // displaySurvey renders the branded PostHog popover modal
-                      // (not the bare renderSurvey output). ignoreConditions
-                      // and ignoreDelay force it to show regardless of targeting.
+                      // displaySurvey renders the branded PostHog popover modal.
+                      // ignoreConditions and ignoreDelay force it to show
+                      // regardless of targeting or display delay.
                       ph.displaySurvey(s.id, {
                         displayType: "popover",
                         ignoreConditions: true,
@@ -144,21 +144,6 @@ export default function SurveysPage() {
                         properties: { surveyId: s.id, surveyName: s.name },
                       });
                       showToast(`Survey "${s.name}" triggered`);
-                    }}
-                    onPreview={async (s) => {
-                      const ph = (await import("posthog-js")).default;
-                      ph.displaySurvey(s.id, {
-                        displayType: "popover",
-                        ignoreConditions: true,
-                        ignoreDelay: true,
-                        skipShownEvent: true,
-                      });
-                      addLog({
-                        type: "event",
-                        name: `Survey Previewed: ${s.name}`,
-                        properties: { surveyId: s.id, surveyName: s.name, preview: true },
-                      });
-                      showToast(`Previewing "${s.name}"`, "info");
                     }}
                     onSubmit={(s, responses) => {
                       const payload: Record<string, unknown> = {
