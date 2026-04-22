@@ -24,19 +24,22 @@ const eventTypes: EventTypeInfo[] = [
     events: [
       {
         name: "capture",
-        description: "Send any custom event with optional properties. This is the most flexible event type — use it for tracking user actions, feature usage, conversions, etc.",
+        description:
+          "Send any custom event with optional properties. This is the most flexible event type — use it for tracking user actions, feature usage, conversions, etc.",
         code: `posthog.capture('event_name', {\n  property_key: 'value',\n  numeric_prop: 42\n})`,
         properties: { action: "demo_capture", source: "event_reference" },
       },
       {
         name: "capture with $set",
-        description: "Capture an event while also setting person properties in the same call. The $set properties persist on the person.",
+        description:
+          "Capture an event while also setting person properties in the same call. The $set properties persist on the person.",
         code: `posthog.capture('event_name', {\n  $set: { plan: 'premium', role: 'admin' }\n})`,
         properties: { $set: { demo_property: "set_via_event" } },
       },
       {
         name: "capture with $set_once",
-        description: "Like $set, but only sets properties if they haven't been set before. Useful for first-touch attribution.",
+        description:
+          "Like $set, but only sets properties if they haven't been set before. Useful for first-touch attribution.",
         code: `posthog.capture('event_name', {\n  $set_once: { initial_referrer: 'google.com' }\n})`,
         properties: { $set_once: { first_seen_page: "event_reference" } },
       },
@@ -47,7 +50,8 @@ const eventTypes: EventTypeInfo[] = [
     events: [
       {
         name: "$pageview",
-        description: "Track page views. Automatically captured if capture_pageview is enabled, but can also be sent manually for SPAs.",
+        description:
+          "Track page views. Automatically captured if capture_pageview is enabled, but can also be sent manually for SPAs.",
         code: `posthog.capture('$pageview')`,
         properties: { $current_url: "/events" },
       },
@@ -70,12 +74,14 @@ const eventTypes: EventTypeInfo[] = [
     events: [
       {
         name: "identify",
-        description: "Link the current anonymous user to a known distinct_id. All future events will use this ID. Pass person properties as the second argument.",
+        description:
+          "Link the current anonymous user to a known distinct_id. All future events will use this ID. Pass person properties as the second argument.",
         code: `posthog.identify('user_123', {\n  email: 'user@example.com',\n  name: 'Jane Doe'\n})`,
       },
       {
         name: "alias",
-        description: "Create an alias between two distinct IDs. Useful when you want to link a user across different systems.",
+        description:
+          "Create an alias between two distinct IDs. Useful when you want to link a user across different systems.",
         code: `posthog.alias('new_id', 'existing_id')`,
       },
       {
@@ -90,7 +96,8 @@ const eventTypes: EventTypeInfo[] = [
     events: [
       {
         name: "setPersonProperties",
-        description: "Set properties on the current person. These persist and are visible in the PostHog People section.",
+        description:
+          "Set properties on the current person. These persist and are visible in the PostHog People section.",
         code: `posthog.setPersonProperties({\n  email: 'user@example.com',\n  plan: 'enterprise'\n})`,
       },
       {
@@ -105,7 +112,8 @@ const eventTypes: EventTypeInfo[] = [
     events: [
       {
         name: "group",
-        description: "Associate the current user with a group. Groups allow analyzing at the organization/team level rather than individual.",
+        description:
+          "Associate the current user with a group. Groups allow analyzing at the organization/team level rather than individual.",
         code: `posthog.group('company', 'company_123', {\n  name: 'Acme Corp',\n  industry: 'Tech'\n})`,
         properties: { company: "demo_company" },
       },
@@ -116,7 +124,8 @@ const eventTypes: EventTypeInfo[] = [
     events: [
       {
         name: "register",
-        description: "Register super properties that are sent with every subsequent event. Useful for context like app version.",
+        description:
+          "Register super properties that are sent with every subsequent event. Useful for context like app version.",
         code: `posthog.register({\n  app_version: '2.0.0',\n  environment: 'production'\n})`,
       },
       {
@@ -136,7 +145,8 @@ const eventTypes: EventTypeInfo[] = [
     events: [
       {
         name: "$exception",
-        description: "Capture exceptions/errors. PostHog requires $exception_list (array of exception objects). Each entry needs type, value, and mechanism fields.",
+        description:
+          "Capture exceptions/errors. PostHog requires $exception_list (array of exception objects). Each entry needs type, value, and mechanism fields.",
         code: `posthog.capture('$exception', {\n  $exception_message: 'Something broke',\n  $exception_type: 'TypeError',\n  $exception_source: 'checkout.js',\n  $exception_lineno: 42,\n  $exception_list: [{\n    type: 'TypeError',\n    value: 'Something broke',\n    mechanism: { handled: true, type: 'generic' }\n  }]\n})`,
         properties: {
           __use_capture_exception: true,
@@ -181,7 +191,8 @@ const eventTypes: EventTypeInfo[] = [
     events: [
       {
         name: "startSessionRecording",
-        description: "Manually start a session recording. Useful when you want to control exactly when recording begins.",
+        description:
+          "Manually start a session recording. Useful when you want to control exactly when recording begins.",
         code: `posthog.startSessionRecording()`,
       },
       {
@@ -216,9 +227,9 @@ const eventTypes: EventTypeInfo[] = [
 const categoryColors: Record<string, string> = {
   "Custom Events": "border-primary/30",
   "Page & Screen Events": "border-success/30",
-  "Identification": "border-accent/30",
+  Identification: "border-accent/30",
   "Person Properties": "border-accent/30",
-  "Groups": "border-warning/30",
+  Groups: "border-warning/30",
   "Super Properties": "border-primary/30",
   "Errors & Exceptions": "border-error/30",
   "Feature Flags": "border-warning/30",
@@ -240,7 +251,7 @@ export default function EventsPage() {
   if (isLoading || !isAuthenticated) return null;
 
   const handleFireEvent = (event: EventTypeInfo["events"][0]) => {
-    if (event.properties && '__use_capture_exception' in event.properties) {
+    if (event.properties && "__use_capture_exception" in event.properties) {
       captureException({
         message: event.properties.message as string,
         type: event.properties.type as string,
@@ -268,12 +279,18 @@ export default function EventsPage() {
 
         {!isInitialized && (
           <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 text-warning text-sm">
-            PostHog is not connected. Events will be logged locally but not sent. <button onClick={() => router.push("/")} className="underline font-medium">Set up your API key</button>
+            PostHog is not connected. Events will be logged locally but not sent.{" "}
+            <button onClick={() => router.push("/")} className="underline font-medium">
+              Set up your API key
+            </button>
           </div>
         )}
 
         {eventTypes.map((category) => (
-          <section key={category.category} className={`bg-card border-l-4 ${categoryColors[category.category] || "border-border"} border border-border rounded-xl p-6`}>
+          <section
+            key={category.category}
+            className={`bg-card border-l-4 ${categoryColors[category.category] || "border-border"} border border-border rounded-xl p-6`}
+          >
             <h2 className="text-xl font-semibold text-foreground mb-4">{category.category}</h2>
             <div className="space-y-6">
               {category.events.map((event) => (

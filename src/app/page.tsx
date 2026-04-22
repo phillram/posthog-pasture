@@ -15,6 +15,8 @@ export default function SetupPage() {
 
   useEffect(() => {
     if (isInitialized && config.apiKey) {
+      // Sync form state with context once PostHog is initialized (post-hydration).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setApiKey(config.apiKey);
       setApiHost(config.apiHost);
     }
@@ -67,43 +69,40 @@ export default function SetupPage() {
     router.push("/login");
   };
 
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary mb-2">🦔 PostHog Pasture</h1>
-          <p className="text-muted">
-            Configure your PostHog project to get started
-          </p>
+          <p className="text-muted">Configure your PostHog project to get started</p>
         </div>
 
         <HedgehogBanner />
 
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-6 space-y-5 mt-6">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              PostHog Project API Key
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">PostHog Project API Key</label>
             <input
               type="text"
               value={apiKey}
-              onChange={(e) => { setApiKey(e.target.value); setKeyError(""); }}
+              onChange={(e) => {
+                setApiKey(e.target.value);
+                setKeyError("");
+              }}
               placeholder="phc_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               className={`w-full px-4 py-3 bg-input-bg border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm ${keyError ? "border-error" : "border-border"}`}
             />
-            <p className="text-xs text-muted mt-2">
-              Find this in PostHog → Project Settings → Project API Key
-            </p>
+            <p className="text-xs text-muted mt-2">Find this in PostHog → Project Settings → Project API Key</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              API Host
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">API Host</label>
             <select
               value={apiHost}
-              onChange={(e) => { setApiHost(e.target.value); setKeyError(""); }}
+              onChange={(e) => {
+                setApiHost(e.target.value);
+                setKeyError("");
+              }}
               className="w-full px-4 py-3 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
             >
               <option value="https://us.i.posthog.com">US Cloud (us.i.posthog.com)</option>
@@ -142,7 +141,6 @@ export default function SetupPage() {
               PostHog is connected
             </div>
           )}
-
         </form>
 
         <p className="text-center text-xs text-muted mt-6">

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
 import HedgehogGif from "@/components/HedgehogGif";
+import ToastStack from "@/components/ToastStack";
+import { useToast } from "@/hooks/useToast";
 
 // ── Flag definitions ──
 // hog-spin:   Boolean flag. true = show spinning hedgehog, false = disabled.
@@ -16,13 +17,16 @@ import HedgehogGif from "@/components/HedgehogGif";
 const GIFS = {
   spin: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnFhd2Y2NjlyazY0dHduNWphZHMxN3A0bnA5b3l3Mjhha2Q2c2Q1bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/oNGwPFSB1GPwebIFnb/giphy.gif",
   dance: {
-    sonic: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3lqaDZlb3U1aGlwaDh1dThvY2V4bG1jNDlnemRtdzljNDl2MDQwNyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ng2FnI4Mg33bOqGaFO/giphy.gif",
+    sonic:
+      "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3lqaDZlb3U1aGlwaDh1dThvY2V4bG1jNDlnemRtdzljNDl2MDQwNyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ng2FnI4Mg33bOqGaFO/giphy.gif",
     cgi: "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaDV4YnI0bXNtM2EzNGNkYTRueGYzdzg1ajMwbzlqMWQxYW9kcThlZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/EWIiv7izSd4J51tntS/giphy.gif",
-    triple: "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaHV4Y3BpemFhdGhzOGd5NjlvdGd2NWJyNDU4aDhycXN1bGU1ZGZzbiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26u47KZgV82BHdXgc/giphy.gif",
+    triple:
+      "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaHV4Y3BpemFhdGhzOGd5NjlvdGd2NWJyNDU4aDhycXN1bGU1ZGZzbiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26u47KZgV82BHdXgc/giphy.gif",
   },
   action: {
     run: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNm40bjEyMHpqYmc1ZGhyd3h2ZDVzNWRrdHYzd3llYXNzeWlmYW43cyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3ohrysN9ge0eqKphCM/giphy.gif",
-    sleep: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZXR1OXhsczFyc3JpOGRtYWkxNWd1b2VqM3FldXc0eWJmZGZ0MHc2YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mZtd62JFmSz4z7eU1W/giphy.gif",
+    sleep:
+      "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZXR1OXhsczFyc3JpOGRtYWkxNWd1b2VqM3FldXc0eWJmZGZ0MHc2YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mZtd62JFmSz4z7eU1W/giphy.gif",
     swim: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHJ4NDk4b3QyaHJwamp5dHMzNmlmZTRqdHNqbzZ2czF6d21lMGhwciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/yzvVXSvrg7JxC/giphy.gif",
   },
 };
@@ -34,16 +38,17 @@ export default function FlagsPage() {
   const { featureFlags, flagsReady, reloadFeatureFlags, addLog, isInitialized, config } = usePosthog();
   const router = useRouter();
 
-  const [toasts, setToasts] = useState<{ id: string; message: string; type: "success" | "error" | "info" }[]>([]);
-  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
-    const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2500);
-  }, []);
+  const { toasts, showToast } = useToast();
 
   if (isLoading) return null;
-  if (!isAuthenticated) { router.push("/login"); return null; }
-  if (!config.apiKey) { router.push("/"); return null; }
+  if (!isAuthenticated) {
+    router.push("/login");
+    return null;
+  }
+  if (!config.apiKey) {
+    router.push("/");
+    return null;
+  }
 
   // ── Override helpers ──
 
@@ -64,7 +69,11 @@ export default function FlagsPage() {
       next = currentValue === "control" ? "test" : "control";
     }
     ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
-    addLog({ type: "flag", name: `Flag ${typeof next === "boolean" ? (next ? "Activated" : "Deactivated") : "Switched"}: ${key}`, properties: { flag: key, from: currentValue, to: next } });
+    addLog({
+      type: "flag",
+      name: `Flag ${typeof next === "boolean" ? (next ? "Activated" : "Deactivated") : "Switched"}: ${key}`,
+      properties: { flag: key, from: currentValue, to: next },
+    });
     reloadFeatureFlags();
     showToast(`"${key}" ${typeof next === "boolean" ? (next ? "activated" : "deactivated") : `switched to "${next}"`}`);
   };
@@ -143,7 +152,6 @@ export default function FlagsPage() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
             {/* ── hog-spin (Boolean) ── */}
             <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center text-center">
               <div className="w-32 h-32 mb-4 rounded-lg overflow-hidden flex items-center justify-center bg-input-bg border border-border">
@@ -258,7 +266,10 @@ export default function FlagsPage() {
             {activeFlags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {activeFlags.map(([key, value]) => (
-                  <span key={key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-success/10 border border-success/20 text-success rounded-lg text-sm font-mono">
+                  <span
+                    key={key}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-success/10 border border-success/20 text-success rounded-lg text-sm font-mono"
+                  >
                     <span className="w-1.5 h-1.5 bg-success rounded-full" />
                     {key}
                     {typeof value === "string" && <span className="text-success/60">= {value}</span>}
@@ -279,10 +290,14 @@ export default function FlagsPage() {
           </div>
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-muted text-xs">All feature flags from your PostHog project. Toggle them using client-side overrides.</p>
+              <p className="text-muted text-xs">
+                All feature flags from your PostHog project. Toggle them using client-side overrides.
+              </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { window.location.reload(); }}
+                  onClick={() => {
+                    window.location.reload();
+                  }}
                   className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
                 >
                   Reload Page
@@ -300,7 +315,10 @@ export default function FlagsPage() {
                   Clear Overrides
                 </button>
                 <button
-                  onClick={() => { reloadFeatureFlags(); showToast("Feature flags reloaded"); }}
+                  onClick={() => {
+                    reloadFeatureFlags();
+                    showToast("Feature flags reloaded");
+                  }}
                   className="py-2 px-4 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-sm"
                 >
                   Reload Flags
@@ -310,14 +328,21 @@ export default function FlagsPage() {
             {allFlags.length > 0 ? (
               <div className="space-y-2">
                 {allFlags.map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between px-4 py-2.5 bg-input-bg border border-border rounded-lg">
+                  <div
+                    key={key}
+                    className="flex items-center justify-between px-4 py-2.5 bg-input-bg border border-border rounded-lg"
+                  >
                     <code className="text-sm font-mono text-foreground">{key}</code>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                        value === true ? "bg-success/20 text-success"
-                          : value === false ? "bg-error/20 text-error"
-                            : "bg-accent/20 text-accent"
-                      }`}>
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                          value === true
+                            ? "bg-success/20 text-success"
+                            : value === false
+                              ? "bg-error/20 text-error"
+                              : "bg-accent/20 text-accent"
+                        }`}
+                      >
                         {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
                       </span>
                       {typeof value === "boolean" ? (
@@ -344,31 +369,15 @@ export default function FlagsPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-muted text-sm text-center py-4">No feature flags loaded. Click &quot;Reload Flags&quot; to fetch them.</p>
+              <p className="text-muted text-sm text-center py-4">
+                No feature flags loaded. Click &quot;Reload Flags&quot; to fetch them.
+              </p>
             )}
           </div>
         </section>
       </main>
 
-      {/* Toast Notifications */}
-      {toasts.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className={`px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium animate-fade-in ${
-                toast.type === "success"
-                  ? "bg-success text-white"
-                  : toast.type === "error"
-                    ? "bg-error text-white"
-                    : "bg-accent text-white"
-              }`}
-            >
-              {toast.message}
-            </div>
-          ))}
-        </div>
-      )}
+      <ToastStack toasts={toasts} />
     </div>
   );
 }

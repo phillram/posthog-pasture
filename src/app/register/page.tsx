@@ -71,12 +71,15 @@ export default function RegisterPage() {
               onClick={() => setApplyFeatureFlags((v) => !v)}
               className={`relative mt-0.5 shrink-0 w-10 h-5 rounded-full transition-colors ${applyFeatureFlags ? "bg-warning" : "bg-muted/30"}`}
             >
-              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${applyFeatureFlags ? "translate-x-5" : "translate-x-0"}`} />
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${applyFeatureFlags ? "translate-x-5" : "translate-x-0"}`}
+              />
             </button>
             <div>
               <p className="text-sm font-medium text-foreground">Apply feature flags on register</p>
               <p className="text-xs text-muted mt-0.5">
-                When enabled, fires <code className="bg-background px-1 rounded font-mono">$feature_flag_called</code> for each flag after registration. Useful for experiment exposure tracking.
+                When enabled, fires <code className="bg-background px-1 rounded font-mono">$feature_flag_called</code>{" "}
+                for each flag after registration. Useful for experiment exposure tracking.
               </p>
             </div>
           </div>

@@ -20,7 +20,13 @@ interface PosthogContextType {
   updateConfig: (updates: Partial<PosthogConfig>) => void;
   resetConfig: () => void;
   captureEvent: (eventName: string, properties?: Record<string, unknown>) => void;
-  captureException: (opts: { message: string; type?: string; source?: string; lineno?: number; stackTrace?: string }) => void;
+  captureException: (opts: {
+    message: string;
+    type?: string;
+    source?: string;
+    lineno?: number;
+    stackTrace?: string;
+  }) => void;
   identifyUser: (userId: string, properties?: Record<string, unknown>) => void;
   resetPerson: () => void;
   setPersonProperties: (properties: Record<string, unknown>) => void;
@@ -72,59 +78,82 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
 
+  const MAX_LOG_ENTRIES = 100;
+
   const addLog = useCallback((entry: Omit<EventLogEntry, "id" | "timestamp">) => {
     setEventLog((prev) => [
       { ...entry, id: crypto.randomUUID(), timestamp: new Date() },
-      ...prev.slice(0, 99),
+      ...prev.slice(0, MAX_LOG_ENTRIES - 1),
     ]);
   }, []);
 
-  // Load config from localStorage on mount
+  const addLogRef = useRef(addLog);
   useEffect(() => {
-    const saved = localStorage.getItem("posthog_config");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setConfig(parsed);
-        if (parsed.apiKey && !initRef.current) {
-          initRef.current = true;
-          posthog.init(parsed.apiKey, {
-            api_host: parsed.apiHost || "https://us.i.posthog.com",
-            autocapture: parsed.autocapture ?? true,
-            capture_pageview: parsed.capturePageview ?? true,
-            capture_pageleave: parsed.capturePageleave ?? true,
-            debug: true,
-            disable_session_recording: parsed.disableSessionRecording ?? false,
-            loaded: (ph) => {
-              ph.onFeatureFlags(() => {
-                const flags = ph.featureFlags.getFlagVariants();
-                // Only fire $feature_flag_called events when explicitly requested
-                // (e.g. when the user logs in with "Apply feature flags" enabled)
-                if (fireFlagEventsRef.current) {
-                  Object.entries(flags).forEach(([key, value]) =>
-                    ph.capture("$feature_flag_called", {
-                      $feature_flag: key,
-                      $feature_flag_response: value,
-                    })
-                  );
-                  fireFlagEventsRef.current = false;
-                }
-                setFeatureFlags(flags as Record<string, boolean | string>);
-                setFlagsReady(true);
-                addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });
-              });
-            },
-          });
-          setIsInitialized(true);
-          if (typeof window !== "undefined") {
-            (window as unknown as Record<string, unknown>).posthog = posthog;
+    addLogRef.current = addLog;
+  }, [addLog]);
+
+  // Shared init routine used by both the mount-time rehydration effect and
+  // interactive calls to initPosthog. Keeping a single source of truth avoids
+  // drift between the two call sites.
+  const runPosthogInit = useCallback((cfg: PosthogConfig) => {
+    posthog.init(cfg.apiKey, {
+      api_host: cfg.apiHost || "https://us.i.posthog.com",
+      autocapture: cfg.autocapture,
+      capture_pageview: cfg.capturePageview,
+      capture_pageleave: cfg.capturePageleave,
+      debug: true,
+      disable_session_recording: cfg.disableSessionRecording,
+      loaded: (ph) => {
+        ph.onFeatureFlags(() => {
+          const flags = ph.featureFlags.getFlagVariants();
+          // Only fire $feature_flag_called events when explicitly requested
+          // (e.g. when the user logs in with "Apply feature flags" enabled)
+          if (fireFlagEventsRef.current) {
+            Object.entries(flags).forEach(([key, value]) =>
+              ph.capture("$feature_flag_called", {
+                $feature_flag: key,
+                $feature_flag_response: value,
+              })
+            );
+            fireFlagEventsRef.current = false;
           }
-        }
-      } catch {
-        // ignore invalid JSON
-      }
+          setFeatureFlags(flags as Record<string, boolean | string>);
+          setFlagsReady(true);
+          addLogRef.current({
+            type: "flag",
+            name: "Feature Flags Ready",
+            properties: flags as Record<string, unknown>,
+          });
+        });
+      },
+    });
+    initRef.current = true;
+    if (typeof window !== "undefined") {
+      (window as unknown as Record<string, unknown>).posthog = posthog;
     }
   }, []);
+
+  // Load config from localStorage on mount. This is a client-only read, so it
+  // must happen in an effect to stay SSR-safe. The react-hooks/set-state-in-effect
+  // rule flags this pattern but it's correct here.
+  useEffect(() => {
+    const saved = localStorage.getItem("posthog_config");
+    if (!saved) return;
+    let parsed: PosthogConfig;
+    try {
+      parsed = { ...defaultConfig, ...JSON.parse(saved) };
+    } catch (err) {
+      console.warn("Corrupt posthog_config in localStorage, clearing:", err);
+      localStorage.removeItem("posthog_config");
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConfig(parsed);
+    if (parsed.apiKey && !initRef.current) {
+      runPosthogInit(parsed);
+      setIsInitialized(true);
+    }
+  }, [runPosthogInit]);
 
   const initPosthog = useCallback(
     (apiKey: string, apiHost?: string) => {
@@ -136,55 +165,42 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       // Reset flag state so consumers don't see stale flags from the previous project
       setFlagsReady(false);
       setFeatureFlags({});
-      posthog.init(apiKey, {
-        api_host: host,
-        autocapture: config.autocapture,
-        capture_pageview: config.capturePageview,
-        capture_pageleave: config.capturePageleave,
-        debug: true,
-        disable_session_recording: config.disableSessionRecording,
-        loaded: (ph) => {
-          ph.onFeatureFlags(() => {
-            const flags = ph.featureFlags.getFlagVariants();
-            // Only fire $feature_flag_called events when explicitly requested
-            if (fireFlagEventsRef.current) {
-              Object.entries(flags).forEach(([key, value]) =>
-                ph.capture("$feature_flag_called", {
-                  $feature_flag: key,
-                  $feature_flag_response: value,
-                })
-              );
-              fireFlagEventsRef.current = false;
-            }
-            setFeatureFlags(flags as Record<string, boolean | string>);
-            setFlagsReady(true);
-            addLog({ type: "flag", name: "Feature Flags Ready", properties: flags as Record<string, unknown> });
-          });
-        },
-      });
-      initRef.current = true;
-      const newConfig = { ...config, apiKey, apiHost: host };
+      const newConfig: PosthogConfig = { ...config, apiKey, apiHost: host };
+      runPosthogInit(newConfig);
       setConfig(newConfig);
       localStorage.setItem("posthog_config", JSON.stringify(newConfig));
       setIsInitialized(true);
-      if (typeof window !== "undefined") {
-        (window as unknown as Record<string, unknown>).posthog = posthog;
-      }
-      addLog({ type: "config", name: "PostHog Initialized", properties: { apiKey: `${apiKey.slice(0, 8)}...`, apiHost: host } });
+      addLog({
+        type: "config",
+        name: "PostHog Initialized",
+        properties: { apiKey: `${apiKey.slice(0, 8)}...`, apiHost: host },
+      });
     },
-    [config, addLog]
+    [config, addLog, runPosthogInit]
   );
 
   const updateConfig = useCallback(
     (updates: Partial<PosthogConfig>) => {
+      // If apiKey is changing, delegate entirely to initPosthog so we have a
+      // single writer for localStorage and a single PostHog re-init path.
+      if (updates.apiKey && updates.apiKey !== config.apiKey) {
+        const nextHost = updates.apiHost || config.apiHost;
+        // Apply any non-key updates first so initPosthog picks them up via `config`.
+        const nonKeyUpdates = { ...updates };
+        delete nonKeyUpdates.apiKey;
+        delete nonKeyUpdates.apiHost;
+        if (Object.keys(nonKeyUpdates).length > 0) {
+          const merged = { ...config, ...nonKeyUpdates };
+          setConfig(merged);
+        }
+        initPosthog(updates.apiKey, nextHost);
+        addLog({ type: "config", name: "Config Updated", properties: updates as Record<string, unknown> });
+        return;
+      }
       const newConfig = { ...config, ...updates };
       setConfig(newConfig);
       localStorage.setItem("posthog_config", JSON.stringify(newConfig));
       addLog({ type: "config", name: "Config Updated", properties: updates as Record<string, unknown> });
-      // Re-init if key changed
-      if (updates.apiKey && updates.apiKey !== config.apiKey) {
-        initPosthog(updates.apiKey, newConfig.apiHost);
-      }
     },
     [config, addLog, initPosthog]
   );
