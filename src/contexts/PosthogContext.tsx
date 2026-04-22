@@ -44,6 +44,7 @@ interface PosthogContextType {
   startSessionRecording: () => void;
   stopSessionRecording: () => void;
   isRecording: boolean;
+  lastResponse: LastResponse | null;
   addLog: (entry: { type: EventLogEntry["type"]; name: string; properties?: Record<string, unknown> }) => void;
 }
 
@@ -53,6 +54,14 @@ interface EventLogEntry {
   type: "event" | "identify" | "pageview" | "group" | "error" | "config" | "person" | "flag" | "recording";
   name: string;
   properties?: Record<string, unknown>;
+}
+
+export interface LastResponse {
+  status: number;
+  ok: boolean;
+  latencyMs: number;
+  endpoint: string;
+  timestamp: Date;
 }
 
 const defaultConfig: PosthogConfig = {
@@ -74,7 +83,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean | string>>({});
   const [flagsReady, setFlagsReady] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [lastResponse, setLastResponse] = useState<LastResponse | null>(null);
   const initRef = useRef(false);
+  const fetchPatchedRef = useRef(false);
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
 
@@ -92,10 +103,57 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     addLogRef.current = addLog;
   }, [addLog]);
 
+  // Wrap window.fetch once to observe requests to PostHog ingestion hosts so
+  // we can show the most recent response in the navbar. Only tracks outbound
+  // fetch (the SDK uses fetch; if it falls back to XHR, the widget will be
+  // silent — acceptable for a sandbox).
+  const patchFetch = useCallback(() => {
+    if (fetchPatchedRef.current || typeof window === "undefined") return;
+    const isPosthogHost = (url: string) => /(?:^|\.)(i\.posthog\.com|posthog\.com)/.test(url);
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      if (!isPosthogHost(url)) return originalFetch(input, init);
+      const start = performance.now();
+      try {
+        const response = await originalFetch(input, init);
+        const latencyMs = Math.round(performance.now() - start);
+        let endpoint = url;
+        try {
+          endpoint = new URL(url).pathname;
+        } catch {}
+        setLastResponse({
+          status: response.status,
+          ok: response.ok,
+          latencyMs,
+          endpoint,
+          timestamp: new Date(),
+        });
+        return response;
+      } catch (err) {
+        const latencyMs = Math.round(performance.now() - start);
+        let endpoint = url;
+        try {
+          endpoint = new URL(url).pathname;
+        } catch {}
+        setLastResponse({
+          status: 0,
+          ok: false,
+          latencyMs,
+          endpoint,
+          timestamp: new Date(),
+        });
+        throw err;
+      }
+    };
+    fetchPatchedRef.current = true;
+  }, []);
+
   // Shared init routine used by both the mount-time rehydration effect and
   // interactive calls to initPosthog. Keeping a single source of truth avoids
   // drift between the two call sites.
   const runPosthogInit = useCallback((cfg: PosthogConfig) => {
+    patchFetch();
     posthog.init(cfg.apiKey, {
       api_host: cfg.apiHost || "https://us.i.posthog.com",
       autocapture: cfg.autocapture,
@@ -134,7 +192,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       (window as unknown as Record<string, unknown>).posthog = posthog;
     }
-  }, []);
+  }, [patchFetch]);
 
   // Load config from localStorage on mount. This is a client-only read, so it
   // must happen in an effect to stay SSR-safe. The react-hooks/set-state-in-effect
@@ -389,6 +447,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         startSessionRecording,
         stopSessionRecording,
         isRecording,
+        lastResponse,
         addLog,
       }}
     >

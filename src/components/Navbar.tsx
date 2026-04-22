@@ -1,12 +1,31 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
-  const { isInitialized, isRecording } = usePosthog();
+  const { isRecording, lastResponse } = usePosthog();
+
+  let lastResponseBadge: ReactNode = null;
+  if (lastResponse) {
+    const okBg = lastResponse.ok ? "bg-success/20 text-success" : "bg-error/20 text-error";
+    const dotBg = lastResponse.ok ? "bg-success" : "bg-error";
+    const statusText = lastResponse.status === 0 ? "ERR" : String(lastResponse.status);
+    const title = `${statusText} · ${lastResponse.endpoint} · ${lastResponse.latencyMs} ms · ${lastResponse.timestamp.toLocaleTimeString()}`;
+    lastResponseBadge = (
+      <div
+        className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md ${okBg}`}
+        title={title}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${dotBg}`} />
+        <span className="font-mono">{statusText}</span>
+        <span className="opacity-70">· {lastResponse.latencyMs} ms</span>
+      </div>
+    );
+  }
 
   return (
     <nav className="bg-card border-b border-border px-6 py-3 flex items-center justify-between">
@@ -54,10 +73,7 @@ export default function Navbar() {
             REC
           </div>
         )}
-        <div
-          className={`w-2 h-2 rounded-full ${isInitialized ? "bg-success" : "bg-error"}`}
-          title={isInitialized ? "PostHog Connected" : "PostHog Not Connected"}
-        />
+        {lastResponseBadge}
         {isAuthenticated && (
           <>
             <span className="text-sm text-muted">{user?.isGuest ? "Guest" : user?.name}</span>

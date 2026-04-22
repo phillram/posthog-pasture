@@ -2,6 +2,8 @@
 
 An interactive sandbox for exploring and testing [PostHog](https://posthog.com). Connect your PostHog project, fire events, toggle feature flags, trigger surveys, generate experiment data, and inspect everything in real time.
 
+The nav bar shows a **Last Response** pill with the HTTP status and latency of the most recent request to PostHog — green when things are healthy, red when something fails — so you can see at a glance whether events are getting through.
+
 ## Tech Stack
 
 | Layer     | Technology               |
@@ -109,6 +111,8 @@ Each survey card has:
 ### Event Log
 
 A live feed of every action captured during the session — events, identifications, flag evaluations, config changes, and more. Each entry has a colour-coded type badge, timestamp, event name, and expandable JSON properties. Capped at the most recent 100 entries.
+
+Filter by **type**, search by **name or properties**, and export what you see with **Copy JSON** or **Download JSON**.
 
 ### Config
 
