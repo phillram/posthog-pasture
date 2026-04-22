@@ -85,7 +85,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [isRecording, setIsRecording] = useState(false);
   const [lastResponse, setLastResponse] = useState<LastResponse | null>(null);
   const initRef = useRef(false);
-  const fetchPatchedRef = useRef(false);
+  const networkPatchedRef = useRef(false);
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
 
@@ -103,13 +103,25 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     addLogRef.current = addLog;
   }, [addLog]);
 
-  // Wrap window.fetch once to observe requests to PostHog ingestion hosts so
-  // we can show the most recent response in the navbar. Only tracks outbound
-  // fetch (the SDK uses fetch; if it falls back to XHR, the widget will be
-  // silent — acceptable for a sandbox).
-  const patchFetch = useCallback(() => {
-    if (fetchPatchedRef.current || typeof window === "undefined") return;
+  // Wrap both window.fetch and XMLHttpRequest so we can show the most recent
+  // response in the navbar regardless of which transport the SDK uses.
+  // posthog-js prefers fetch but can fall back to XHR for some request types,
+  // and our own experiments page uses fetch directly.
+  const patchNetwork = useCallback(() => {
+    if (networkPatchedRef.current || typeof window === "undefined") return;
     const isPosthogHost = (url: string) => /(?:^|\.)(i\.posthog\.com|posthog\.com)/.test(url);
+    const pathOf = (url: string) => {
+      try {
+        return new URL(url, window.location.origin).pathname;
+      } catch {
+        return url;
+      }
+    };
+    const record = (status: number, ok: boolean, latencyMs: number, endpoint: string) => {
+      setLastResponse({ status, ok, latencyMs, endpoint, timestamp: new Date() });
+    };
+
+    // ── fetch ──
     const originalFetch = window.fetch.bind(window);
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
@@ -117,43 +129,51 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       const start = performance.now();
       try {
         const response = await originalFetch(input, init);
-        const latencyMs = Math.round(performance.now() - start);
-        let endpoint = url;
-        try {
-          endpoint = new URL(url).pathname;
-        } catch {}
-        setLastResponse({
-          status: response.status,
-          ok: response.ok,
-          latencyMs,
-          endpoint,
-          timestamp: new Date(),
-        });
+        record(response.status, response.ok, Math.round(performance.now() - start), pathOf(url));
         return response;
       } catch (err) {
-        const latencyMs = Math.round(performance.now() - start);
-        let endpoint = url;
-        try {
-          endpoint = new URL(url).pathname;
-        } catch {}
-        setLastResponse({
-          status: 0,
-          ok: false,
-          latencyMs,
-          endpoint,
-          timestamp: new Date(),
-        });
+        record(0, false, Math.round(performance.now() - start), pathOf(url));
         throw err;
       }
     };
-    fetchPatchedRef.current = true;
+
+    // ── XMLHttpRequest ──
+    const XHRProto = window.XMLHttpRequest.prototype;
+    const originalOpen = XHRProto.open;
+    const originalSend = XHRProto.send;
+    type TrackedXHR = XMLHttpRequest & {
+      __pasture_url?: string;
+      __pasture_start?: number;
+    };
+    XHRProto.open = function (this: TrackedXHR, ...args: unknown[]) {
+      const url = args[1];
+      this.__pasture_url = typeof url === "string" ? url : url instanceof URL ? url.toString() : "";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return originalOpen.apply(this, args as any);
+    };
+    XHRProto.send = function (this: TrackedXHR, ...args: unknown[]) {
+      const url = this.__pasture_url;
+      if (url && isPosthogHost(url)) {
+        this.__pasture_start = performance.now();
+        this.addEventListener("loadend", () => {
+          const latencyMs = Math.round(performance.now() - (this.__pasture_start ?? performance.now()));
+          const status = this.status || 0;
+          const ok = status >= 200 && status < 300;
+          record(status, ok, latencyMs, pathOf(url));
+        });
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return originalSend.apply(this, args as any);
+    };
+
+    networkPatchedRef.current = true;
   }, []);
 
   // Shared init routine used by both the mount-time rehydration effect and
   // interactive calls to initPosthog. Keeping a single source of truth avoids
   // drift between the two call sites.
   const runPosthogInit = useCallback((cfg: PosthogConfig) => {
-    patchFetch();
+    patchNetwork();
     posthog.init(cfg.apiKey, {
       api_host: cfg.apiHost || "https://us.i.posthog.com",
       autocapture: cfg.autocapture,
@@ -192,7 +212,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       (window as unknown as Record<string, unknown>).posthog = posthog;
     }
-  }, [patchFetch]);
+  }, [patchNetwork]);
 
   // Load config from localStorage on mount. This is a client-only read, so it
   // must happen in an effect to stay SSR-safe. The react-hooks/set-state-in-effect

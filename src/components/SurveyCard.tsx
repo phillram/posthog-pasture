@@ -8,6 +8,7 @@ import type {
   RatingSurveyQuestion,
   LinkSurveyQuestion,
 } from "posthog-js";
+import { surveyStatus, statusBadgeClasses, statusLabels } from "@/lib/surveyStatus";
 
 type ResponseValue = string | string[] | number | null;
 
@@ -48,6 +49,7 @@ export default function SurveyCard({ survey, onTrigger, onSubmit, onDismiss }: P
 
   const questionCount = survey.questions?.length || 0;
   const isApi = survey.type === "api";
+  const status = surveyStatus(survey);
   const hasConditions =
     !!survey.conditions?.url ||
     !!survey.conditions?.selector ||
@@ -58,7 +60,12 @@ export default function SurveyCard({ survey, onTrigger, onSubmit, onDismiss }: P
     <div className="bg-input-bg border border-border rounded-lg p-4">
       <div className="flex items-center justify-between mb-2 gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{survey.name}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-medium text-foreground truncate">{survey.name}</p>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wide ${statusBadgeClasses[status]}`}>
+              {statusLabels[status]}
+            </span>
+          </div>
           <p className="text-xs text-muted">
             {survey.type} &middot; {questionCount} question{questionCount !== 1 ? "s" : ""}
           </p>
