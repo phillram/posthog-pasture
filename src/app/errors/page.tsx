@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
+import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
 
@@ -79,6 +80,7 @@ export default function ErrorsPage() {
               Fire synthetic exceptions to test PostHog&apos;s error tracking pipeline.
             </p>
           </div>
+          <HedgehogGif index={2} size="sm" />
         </div>
 
         {!isInitialized && (

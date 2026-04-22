@@ -8,7 +8,7 @@ import Navbar from "@/components/Navbar";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
 
-import { HedgehogBanner } from "@/components/HedgehogGif";
+import HedgehogGif from "@/components/HedgehogGif";
 
 interface EventTypeInfo {
   category: string;
@@ -310,14 +310,15 @@ export default function EventsPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-5xl mx-auto p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Events</h1>
-          <p className="text-muted text-sm mt-1">
-            Fire custom events, register super properties, and browse the complete PostHog event reference.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Events</h1>
+            <p className="text-muted text-sm mt-1">
+              Fire custom events, register super properties, and browse the complete PostHog event reference.
+            </p>
+          </div>
+          <HedgehogGif index={5} size="sm" />
         </div>
-
-        <HedgehogBanner />
 
         {!isInitialized && (
           <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 text-warning text-sm">
@@ -453,17 +454,27 @@ export default function EventsPage() {
             <h2 className="text-lg font-semibold text-foreground">Event Reference</h2>
           </div>
           <p className="text-muted text-sm mb-4">
-            Complete guide to every PostHog event type. Click &quot;Fire Event&quot; to send a demo event.
+            Complete guide to every PostHog event type. Click a category below to expand it, then &quot;Fire Event&quot;
+            to send a demo event.
           </p>
         </div>
 
         {eventTypes.map((category) => (
-          <section
+          <details
             key={category.category}
-            className={`bg-card border-l-4 ${categoryColors[category.category] || "border-border"} border border-border rounded-xl p-6`}
+            className={`group bg-card border-l-4 ${categoryColors[category.category] || "border-border"} border border-border rounded-xl overflow-hidden`}
           >
-            <h2 className="text-xl font-semibold text-foreground mb-4">{category.category}</h2>
-            <div className="space-y-6">
+            <summary className="flex items-center justify-between cursor-pointer select-none p-6 hover:bg-input-bg/40 transition-colors list-none">
+              <div className="flex items-center gap-3">
+                <span className="text-muted text-sm transition-transform group-open:rotate-90">▸</span>
+                <h2 className="text-xl font-semibold text-foreground">{category.category}</h2>
+                <span className="text-xs text-muted">
+                  {category.events.length} method{category.events.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <span className="text-xs text-muted group-open:hidden">Click to expand</span>
+            </summary>
+            <div className="px-6 pb-6 space-y-6 border-t border-border/50 pt-4">
               {category.events.map((event) => (
                 <div key={event.name} className="border-b border-border/50 pb-5 last:border-0 last:pb-0">
                   <div className="flex items-start justify-between gap-4">
@@ -486,7 +497,7 @@ export default function EventsPage() {
                 </div>
               ))}
             </div>
-          </section>
+          </details>
         ))}
       </main>
 
