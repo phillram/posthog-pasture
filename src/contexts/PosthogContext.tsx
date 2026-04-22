@@ -103,10 +103,10 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     addLogRef.current = addLog;
   }, [addLog]);
 
-  // Wrap both window.fetch and XMLHttpRequest so we can show the most recent
+  // Wrap fetch, XHR, and navigator.sendBeacon so we can show the most recent
   // response in the navbar regardless of which transport the SDK uses.
-  // posthog-js prefers fetch but can fall back to XHR for some request types,
-  // and our own experiments page uses fetch directly.
+  // posthog-js uses sendBeacon for most captures, XHR for some polling, and
+  // the experiments page uses fetch directly.
   const patchNetwork = useCallback(() => {
     if (networkPatchedRef.current || typeof window === "undefined") return;
     const isPosthogHost = (url: string) => /(?:^|\.)(i\.posthog\.com|posthog\.com)/.test(url);
@@ -165,6 +165,24 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return originalSend.apply(this, args as any);
     };
+
+    // ── navigator.sendBeacon ──
+    // sendBeacon is the SDK's preferred transport for captures. It's
+    // fire-and-forget (no response), so we can only record the queued status.
+    // Shows as 202 (standard for beacon success) or 0 (browser refused).
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const originalSendBeacon = navigator.sendBeacon.bind(navigator);
+      navigator.sendBeacon = (url: string | URL, data?: BodyInit | null): boolean => {
+        const urlString = typeof url === "string" ? url : url.toString();
+        const start = performance.now();
+        const queued = originalSendBeacon(urlString, data);
+        if (isPosthogHost(urlString)) {
+          const latencyMs = Math.round(performance.now() - start);
+          record(queued ? 202 : 0, queued, latencyMs, pathOf(urlString));
+        }
+        return queued;
+      };
+    }
 
     networkPatchedRef.current = true;
   }, []);

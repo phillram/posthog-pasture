@@ -114,15 +114,17 @@ export default function SurveysPage() {
                   {statusCounts.archived > 0 ? ` · ${statusCounts.archived} archived` : ""}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={showAllStatuses}
-                    onChange={(e) => setShowAllStatuses(e.target.checked)}
-                  />
-                  Show all statuses
-                </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAllStatuses((v) => !v)}
+                  className={`py-2 px-4 font-medium rounded-lg transition-colors text-sm ${
+                    showAllStatuses
+                      ? "bg-pink-600 hover:bg-pink-500 text-white"
+                      : "bg-pink-500/10 hover:bg-pink-500/20 text-pink-400"
+                  }`}
+                >
+                  {showAllStatuses ? "Running Only" : "Show All Statuses"}
+                </button>
                 <button
                   onClick={() => loadSurveys()}
                   className="py-2 px-4 bg-pink-500/20 hover:bg-pink-500/30 text-pink-400 font-medium rounded-lg transition-colors text-sm"
@@ -165,13 +167,6 @@ export default function SurveysPage() {
                       captureEvent("survey sent", payload);
                       showToast(`Response submitted for "${s.name}"`);
                     }}
-                    onDismiss={(s) => {
-                      captureEvent("survey dismissed", {
-                        $survey_id: s.id,
-                        $survey_name: s.name,
-                      });
-                      showToast(`Dismissed "${s.name}"`, "info");
-                    }}
                   />
                 ))}
               </div>
@@ -181,7 +176,7 @@ export default function SurveysPage() {
                   ? "No surveys loaded."
                   : showAllStatuses
                     ? "No surveys to show."
-                    : "No running surveys. Turn on \"Show all statuses\" to see drafts and completed surveys."}
+                    : "No running surveys. Click \"Show All Statuses\" to see drafts and completed surveys."}
               </p>
             )}
           </div>
