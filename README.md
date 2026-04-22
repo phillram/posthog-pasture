@@ -4,6 +4,8 @@ An interactive sandbox for exploring and testing the [PostHog](https://posthog.c
 
 > **Debug mode is always on.** The SDK is initialized with `debug: true`, and the `posthog` instance is exposed on `window` so you can call `posthog.capture(...)` etc. directly from the browser console.
 
+> **Events flush fast.** The request queue is configured with `flush_interval_ms: 250` (PostHog's minimum, default is 3000 ms) so captures show up in PostHog with minimal delay. Any remaining lag after that is PostHog's server-side ingestion / processing time, not code in this repo.
+
 ## Tech Stack
 
 | Layer     | Technology                       |
@@ -277,8 +279,8 @@ Load, preview, and respond to surveys from your PostHog project. Surveys **auto-
 
 - **Reload Surveys** — fetch every survey in your project
 - **Matching Only** — fetch only surveys that match the current user
-- **Trigger** — render a popover survey directly on the page
-- **Preview** — render any survey regardless of targeting rules
+- **Trigger** — render a popover survey in PostHog's branded modal via `posthog.displaySurvey(id, { displayType: "popover", ignoreConditions: true, ignoreDelay: true })` — same styling as a real in-product survey
+- **Preview** — same modal render, with `skipShownEvent: true` so `survey shown` isn't emitted
 - **Dismiss** — fire a `survey dismissed` event for the survey
 - For `api`-type surveys, each question (open, rating, single choice, multiple choice, link) is rendered inline with a Submit button that fires `survey sent` with `$survey_response_<index>` per answer
 - Each card shows an expandable **Targeting conditions** panel (url, selector, events, linked flag)

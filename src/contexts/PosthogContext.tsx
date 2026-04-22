@@ -103,6 +103,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       capture_pageleave: cfg.capturePageleave,
       debug: true,
       disable_session_recording: cfg.disableSessionRecording,
+      // This is a sandbox — flush events as fast as the SDK allows (minimum 250ms)
+      // so captures show up in PostHog's UI with minimal delay. Default is 3s.
+      request_queue_config: { flush_interval_ms: 250 },
       loaded: (ph) => {
         ph.onFeatureFlags(() => {
           const flags = ph.featureFlags.getFlagVariants();
