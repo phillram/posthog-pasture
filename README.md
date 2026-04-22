@@ -119,6 +119,8 @@ The **"Apply feature flags on login"** toggle controls whether `$feature_flag_ca
 
 Create an account with name, email, and any password. On submit, `posthog.identify()` is called with the user's name and email, and a `pasture_user_registered` event is fired.
 
+The **"Apply feature flags on register"** toggle (off by default) works identically to the login equivalent — when enabled, `$feature_flag_called` events fire for every flag after registration.
+
 ---
 
 ### Dashboard (`/dashboard`)
@@ -168,7 +170,7 @@ One-click buttons for the most common event types. Hover any button to see the e
 
 #### Sandboxes
 - **JavaScript Sandbox** — run arbitrary JS expressions. Results are captured as `pasture_js_executed` events; errors are captured as exceptions. Quick snippets include: User Agent, Screen size, Performance, Cookies, localStorage, Timezone, and more
-- **PostHog Console** — run any `posthog-js` command like a browser console (`Cmd+Enter` to execute). Includes quick command buttons, a full command reference with documentation links, and a scrollable command history with "Reuse"
+- **PostHog Console** — run any `posthog-js` command like a browser console. A `⌘↵` badge on the textarea shows the keyboard shortcut. Includes quick command buttons, a full command reference with documentation links, and a scrollable command history with "Reuse"
 
 ---
 
@@ -243,6 +245,8 @@ For each simulated user, the wizard:
 - Per-variant breakdown (dynamically built from whatever PostHog assigned)
 - Full user table with username, PostHog-assigned variant, and ✓/— conversion status
 - "View in PostHog →" link to your experiments dashboard
+
+> **Simulated user IDs** are prefixed with `pasture_` (e.g. `pasture_swift_hedgehog_001`) so they are easy to identify and filter or delete in PostHog after testing.
 
 ---
 

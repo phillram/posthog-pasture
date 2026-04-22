@@ -992,19 +992,23 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-3">
-              <textarea
-                value={phCommand}
-                onChange={(e) => setPhCommand(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handlePhCommand(); } }}
-                rows={3}
-                placeholder="posthog.capture('my_event', { key: 'value' })"
-                className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
-              />
+              <div className="relative">
+                <textarea
+                  value={phCommand}
+                  onChange={(e) => setPhCommand(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handlePhCommand(); } }}
+                  rows={3}
+                  placeholder="posthog.capture('my_event', { key: 'value' })"
+                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono pr-28"
+                />
+                <kbd className="absolute bottom-2.5 right-2.5 pointer-events-none inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-background border border-border rounded text-xs text-muted font-sans select-none">
+                  <span>⌘</span><span>↵</span>
+                </kbd>
+              </div>
               <div className="flex gap-2 items-center">
                 <button onClick={handlePhCommand} className="py-2.5 px-6 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm">
                   Execute
                 </button>
-                <span className="text-xs text-muted">Cmd+Enter to run</span>
                 <button onClick={() => { setPhHistory([]); showToast("History cleared", "info"); }} className="ml-auto py-2 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs">
                   Clear History
                 </button>

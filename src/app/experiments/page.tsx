@@ -22,7 +22,7 @@ const NOUNS = [
 function generateUsername(index: number): string {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  return `${adj}_${noun}_${String(index + 1).padStart(3, "0")}`;
+  return `pasture_${adj}_${noun}_${String(index + 1).padStart(3, "0")}`;
 }
 
 // ── Conversion actions ────────────────────────────────────────────────────────
