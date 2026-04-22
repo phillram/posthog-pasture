@@ -1,22 +1,63 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
+import ToastStack from "@/components/ToastStack";
+import { useToast } from "@/hooks/useToast";
 
 // ── Name generation ──────────────────────────────────────────────────────────
 
 const ADJECTIVES = [
-  "swift", "brave", "golden", "silver", "scarlet", "cosmic", "fuzzy", "blazing",
-  "stormy", "crimson", "turbo", "vivid", "ancient", "electric", "silent", "bold",
-  "jade", "rusty", "marble", "velvet", "neon", "amber", "cobalt", "mossy",
+  "swift",
+  "brave",
+  "golden",
+  "silver",
+  "scarlet",
+  "cosmic",
+  "fuzzy",
+  "blazing",
+  "stormy",
+  "crimson",
+  "turbo",
+  "vivid",
+  "ancient",
+  "electric",
+  "silent",
+  "bold",
+  "jade",
+  "rusty",
+  "marble",
+  "velvet",
+  "neon",
+  "amber",
+  "cobalt",
+  "mossy",
 ];
 const NOUNS = [
-  "hedgehog", "badger", "falcon", "rabbit", "otter", "porcupine", "marmot",
-  "sparrow", "lynx", "wombat", "capybara", "penguin", "flamingo", "quokka",
-  "axolotl", "narwhal", "platypus", "toucan", "gecko", "raccoon", "lemur",
+  "hedgehog",
+  "badger",
+  "falcon",
+  "rabbit",
+  "otter",
+  "porcupine",
+  "marmot",
+  "sparrow",
+  "lynx",
+  "wombat",
+  "capybara",
+  "penguin",
+  "flamingo",
+  "quokka",
+  "axolotl",
+  "narwhal",
+  "platypus",
+  "toucan",
+  "gecko",
+  "raccoon",
+  "lemur",
 ];
 
 function generateUsername(index: number): string {
@@ -28,11 +69,11 @@ function generateUsername(index: number): string {
 // ── Conversion actions ────────────────────────────────────────────────────────
 
 const CONVERSION_ACTIONS = [
-  { label: "Purchase",     event: "pasture_purchase",         props: { item: "experiment_product", price: 29.99 } },
-  { label: "Sign Up",      event: "pasture_signup",            props: { source: "experiment" } },
-  { label: "Checkout",     event: "pasture_checkout_started",  props: { cart_value: 49.99 } },
-  { label: "Feature Used", event: "pasture_feature_used",      props: { feature: "experiment_feature" } },
-  { label: "Form Submit",  event: "pasture_form_submitted",    props: { form_name: "experiment_form" } },
+  { label: "Purchase", event: "pasture_purchase", props: { item: "experiment_product", price: 29.99 } },
+  { label: "Sign Up", event: "pasture_signup", props: { source: "experiment" } },
+  { label: "Checkout", event: "pasture_checkout_started", props: { cart_value: 49.99 } },
+  { label: "Feature Used", event: "pasture_feature_used", props: { feature: "experiment_feature" } },
+  { label: "Form Submit", event: "pasture_form_submitted", props: { form_name: "experiment_form" } },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -68,9 +109,7 @@ export default function ExperimentsPage() {
   const [selectedAction, setSelectedAction] = useState(CONVERSION_ACTIONS[0].event);
 
   // Step 4: conversion % — randomised on mount
-  const [conversionPct, setConversionPct] = useState(
-    () => Math.floor(Math.random() * 100) + 1
-  );
+  const [conversionPct, setConversionPct] = useState(() => Math.floor(Math.random() * 100) + 1);
 
   // Running state
   const [progress, setProgress] = useState(0);
@@ -79,16 +118,17 @@ export default function ExperimentsPage() {
   const [runError, setRunError] = useState("");
 
   // Toast
-  const [toasts, setToasts] = useState<{ id: string; message: string; type: "success" | "error" | "info" }[]>([]);
-  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
-    const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2500);
-  }, []);
+  const { toasts, showToast } = useToast();
 
   if (isLoading) return null;
-  if (!isAuthenticated) { router.push("/login"); return null; }
-  if (!config.apiKey) { router.push("/"); return null; }
+  if (!isAuthenticated) {
+    router.push("/login");
+    return null;
+  }
+  if (!config.apiKey) {
+    router.push("/");
+    return null;
+  }
 
   // ── Flag classification ──
   const flagNames = Object.keys(featureFlags).sort();
@@ -96,7 +136,7 @@ export default function ExperimentsPage() {
   const experimentFlagNames = flagNames.filter((k) => typeof featureFlags[k] === "string");
   const boolFlagNames = flagNames.filter((k) => typeof featureFlags[k] === "boolean");
   // Fall back to showing all if no multivariate flags are present
-  const visibleFlags = (showAllFlags || experimentFlagNames.length === 0) ? flagNames : experimentFlagNames;
+  const visibleFlags = showAllFlags || experimentFlagNames.length === 0 ? flagNames : experimentFlagNames;
 
   const actionInfo = CONVERSION_ACTIONS.find((a) => a.event === selectedAction) || CONVERSION_ACTIONS[0];
 
@@ -121,14 +161,16 @@ export default function ExperimentsPage() {
     // Pre-generate all usernames and conversion outcomes up front so we can
     // reference them stably across the async decide calls.
     const now = new Date();
-    const plan: Array<{ username: string; actionCompleted: boolean; ts: string }> =
-      Array.from({ length: userCount }, (_, i) => ({
+    const plan: Array<{ username: string; actionCompleted: boolean; ts: string }> = Array.from(
+      { length: userCount },
+      (_, i) => ({
         username: generateUsername(i),
         // Determine NOW whether this user will convert — independent of variant
         actionCompleted: Math.random() * 100 < conversionPct,
         // Stagger timestamps so PostHog preserves event order
         ts: new Date(now.getTime() + i * 100).toISOString(),
-      }));
+      })
+    );
 
     // ── Phase 1: Call /decide for each user to get their actual flag variant ──
     // PostHog evaluates the rollout rules against the distinct_id — this is the
@@ -262,18 +304,24 @@ export default function ExperimentsPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-4xl mx-auto p-6 space-y-6">
-
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">🧪 Experiments</h1>
             <p className="text-muted text-sm">
-              Generate realistic experiment data. PostHog assigns each simulated user their variant via the decide API — no manual assignment.
+              Generate realistic experiment data. PostHog assigns each simulated user their variant via the decide API —
+              no manual assignment.
             </p>
           </div>
           {step !== "configure" && (
             <button
-              onClick={() => { setStep("configure"); setResults([]); setProgress(0); setRunError(""); setProgressLabel(""); }}
+              onClick={() => {
+                setStep("configure");
+                setResults([]);
+                setProgress(0);
+                setRunError("");
+                setProgressLabel("");
+              }}
               className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
             >
               ← New Experiment
@@ -283,18 +331,22 @@ export default function ExperimentsPage() {
 
         {!isInitialized && (
           <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 text-warning text-sm">
-            PostHog is not connected. <button onClick={() => router.push("/")} className="underline font-medium">Set up your API key</button>
+            PostHog is not connected.{" "}
+            <button onClick={() => router.push("/")} className="underline font-medium">
+              Set up your API key
+            </button>
           </div>
         )}
 
         {/* ── Configure step ── */}
         {step === "configure" && (
           <div className="space-y-6">
-
             {/* Step 1: Flag selection */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-3">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                  1
+                </span>
                 <h2 className="text-base font-semibold text-foreground">Select a feature flag</h2>
                 {flagsReady && experimentFlagNames.length > 0 && boolFlagNames.length > 0 && (
                   <button
@@ -313,8 +365,8 @@ export default function ExperimentsPage() {
                 )}
               </div>
               <p className="text-muted text-xs mb-3 ml-9">
-                Multivariate flags are shown by default — these are typically linked to experiments.
-                PostHog evaluates each flag per user using its own rollout rules.
+                Multivariate flags are shown by default — these are typically linked to experiments. PostHog evaluates
+                each flag per user using its own rollout rules.
               </p>
 
               {!flagsReady ? (
@@ -325,7 +377,8 @@ export default function ExperimentsPage() {
                 <>
                   {experimentFlagNames.length === 0 && (
                     <div className="ml-9 mb-3 p-3 bg-warning/10 border border-warning/20 rounded-lg text-xs text-warning">
-                      No multivariate flags found — showing all flags. Multivariate flags (string variants like &ldquo;control&rdquo;, &ldquo;test&rdquo;) are typically linked to experiments.
+                      No multivariate flags found — showing all flags. Multivariate flags (string variants like
+                      &ldquo;control&rdquo;, &ldquo;test&rdquo;) are typically linked to experiments.
                     </div>
                   )}
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 ml-9">
@@ -344,9 +397,11 @@ export default function ExperimentsPage() {
                         >
                           <span className="flex items-center gap-1 flex-wrap leading-tight">
                             <span className="truncate max-w-full">{key}</span>
-                            <span className={`text-xs px-1 py-0 rounded font-sans shrink-0 ${
-                              isExperiment ? "bg-warning/20 text-warning" : "bg-muted/20 text-muted"
-                            }`}>
+                            <span
+                              className={`text-xs px-1 py-0 rounded font-sans shrink-0 ${
+                                isExperiment ? "bg-warning/20 text-warning" : "bg-muted/20 text-muted"
+                              }`}
+                            >
                               {isExperiment ? "🧪" : "🚩"}
                             </span>
                           </span>
@@ -361,7 +416,9 @@ export default function ExperimentsPage() {
             {/* Step 2: User count */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                  2
+                </span>
                 <h2 className="text-base font-semibold text-foreground">Number of simulated users</h2>
               </div>
               <div className="flex items-center gap-4 ml-9">
@@ -379,7 +436,9 @@ export default function ExperimentsPage() {
                       key={n}
                       onClick={() => setUserCount(n)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        userCount === n ? "bg-primary text-white" : "bg-input-bg hover:bg-primary/10 text-muted border border-border"
+                        userCount === n
+                          ? "bg-primary text-white"
+                          : "bg-input-bg hover:bg-primary/10 text-muted border border-border"
                       }`}
                     >
                       {n}
@@ -395,11 +454,14 @@ export default function ExperimentsPage() {
             {/* Step 3: Conversion rate */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                  3
+                </span>
                 <h2 className="text-base font-semibold text-foreground">Conversion rate</h2>
               </div>
               <p className="text-muted text-xs mb-3 ml-9">
-                Percentage of simulated users who complete the conversion action. Defaults to a random value — override if needed.
+                Percentage of simulated users who complete the conversion action. Defaults to a random value — override
+                if needed.
               </p>
               <div className="flex items-center gap-4 ml-9">
                 <div className="flex items-center">
@@ -419,7 +481,9 @@ export default function ExperimentsPage() {
                       key={n}
                       onClick={() => setConversionPct(n)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        conversionPct === n ? "bg-primary text-white" : "bg-input-bg hover:bg-primary/10 text-muted border border-border"
+                        conversionPct === n
+                          ? "bg-primary text-white"
+                          : "bg-input-bg hover:bg-primary/10 text-muted border border-border"
                       }`}
                     >
                       {n}%
@@ -432,7 +496,9 @@ export default function ExperimentsPage() {
             {/* Step 4: Conversion action */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">4</span>
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                  4
+                </span>
                 <h2 className="text-base font-semibold text-foreground">Conversion action</h2>
               </div>
               <p className="text-muted text-xs mb-3 ml-9">The event fired for users who convert.</p>
@@ -448,10 +514,14 @@ export default function ExperimentsPage() {
                     }`}
                   >
                     <span className="block text-sm font-semibold">{action.label}</span>
-                    <span className={`block text-xs font-mono mt-0.5 ${selectedAction === action.event ? "text-success/80" : "text-muted"}`}>
+                    <span
+                      className={`block text-xs font-mono mt-0.5 ${selectedAction === action.event ? "text-success/80" : "text-muted"}`}
+                    >
                       {action.event}
                     </span>
-                    <span className={`block text-xs mt-0.5 ${selectedAction === action.event ? "text-success/70" : "text-muted/70"}`}>
+                    <span
+                      className={`block text-xs mt-0.5 ${selectedAction === action.event ? "text-success/70" : "text-muted/70"}`}
+                    >
                       {JSON.stringify(action.props)}
                     </span>
                   </button>
@@ -465,7 +535,9 @@ export default function ExperimentsPage() {
               <div className="grid grid-cols-2 gap-3 text-sm mb-5">
                 <div>
                   <p className="text-muted text-xs">Flag</p>
-                  <p className="font-mono text-foreground mt-0.5">{selectedFlag || <span className="text-error text-xs">Not selected</span>}</p>
+                  <p className="font-mono text-foreground mt-0.5">
+                    {selectedFlag || <span className="text-error text-xs">Not selected</span>}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted text-xs">Simulated users</p>
@@ -518,9 +590,14 @@ export default function ExperimentsPage() {
               </div>
             </div>
             <div className="text-muted text-xs space-y-1">
-              <p>Phase 1 (0–70%): PostHog evaluates each user&apos;s flag variant via <code className="font-mono">/decide</code></p>
+              <p>
+                Phase 1 (0–70%): PostHog evaluates each user&apos;s flag variant via{" "}
+                <code className="font-mono">/decide</code>
+              </p>
               <p>Phase 2 (70–80%): Building event batch</p>
-              <p>Phase 3 (80–100%): Sending to PostHog via <code className="font-mono">/batch/</code></p>
+              <p>
+                Phase 3 (80–100%): Sending to PostHog via <code className="font-mono">/batch/</code>
+              </p>
             </div>
           </div>
         )}
@@ -528,7 +605,6 @@ export default function ExperimentsPage() {
         {/* ── Results step ── */}
         {step === "results" && (
           <div className="space-y-4">
-
             {/* Error banner */}
             {runError && (
               <div className="bg-error/10 border border-error/30 rounded-lg p-4 text-error text-sm">
@@ -540,7 +616,9 @@ export default function ExperimentsPage() {
             <div className="flex items-center gap-3 px-4 py-3 bg-card border border-primary/20 rounded-xl flex-wrap">
               <span className="text-muted text-sm">Experiment flag:</span>
               <code className="font-mono text-primary font-semibold">{selectedFlag}</code>
-              <span className="text-muted text-xs">· {userCount} users · {conversionPct}% target conversion · variants assigned by PostHog</span>
+              <span className="text-muted text-xs">
+                · {userCount} users · {conversionPct}% target conversion · variants assigned by PostHog
+              </span>
             </div>
 
             {/* Stats row */}
@@ -576,7 +654,9 @@ export default function ExperimentsPage() {
                       return (
                         <div key={v} className="bg-input-bg border border-border rounded-lg p-3">
                           <p className="font-mono text-sm text-foreground font-medium">{v}</p>
-                          <p className="text-xs text-muted mt-1">{group.length} users · {converted} converted</p>
+                          <p className="text-xs text-muted mt-1">
+                            {group.length} users · {converted} converted
+                          </p>
                           <p className="text-xs font-semibold text-primary mt-0.5">
                             {group.length > 0 ? `${Math.round((converted / group.length) * 100)}%` : "—"}
                           </p>
@@ -615,20 +695,28 @@ export default function ExperimentsPage() {
                       <tr key={u.username} className="border-b border-border/50 last:border-0">
                         <td className="py-1.5 pr-4 font-mono text-xs text-foreground">{u.username}</td>
                         <td className="py-1.5 pr-4">
-                          <span className={`px-2 py-0.5 text-xs rounded font-mono ${
-                            u.variant === "control"
-                              ? "bg-muted/20 text-muted"
-                              : u.variant === "false"
-                                ? "bg-error/10 text-error/60"
-                                : "bg-accent/10 text-accent"
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 text-xs rounded font-mono ${
+                              u.variant === "control"
+                                ? "bg-muted/20 text-muted"
+                                : u.variant === "false"
+                                  ? "bg-error/10 text-error/60"
+                                  : "bg-accent/10 text-accent"
+                            }`}
+                          >
                             {u.variant}
                           </span>
                         </td>
                         <td className="py-1.5">
-                          {u.actionCompleted
-                            ? <span className="text-success font-semibold text-base" title="Completed">✓</span>
-                            : <span className="text-muted/40 text-base" title="Not completed">—</span>}
+                          {u.actionCompleted ? (
+                            <span className="text-success font-semibold text-base" title="Completed">
+                              ✓
+                            </span>
+                          ) : (
+                            <span className="text-muted/40 text-base" title="Not completed">
+                              —
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -640,25 +728,7 @@ export default function ExperimentsPage() {
         )}
       </main>
 
-      {/* Toast Notifications */}
-      {toasts.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className={`px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium animate-fade-in ${
-                toast.type === "success"
-                  ? "bg-success text-white"
-                  : toast.type === "error"
-                    ? "bg-error text-white"
-                    : "bg-accent text-white"
-              }`}
-            >
-              {toast.message}
-            </div>
-          ))}
-        </div>
-      )}
+      <ToastStack toasts={toasts} />
     </div>
   );
 }

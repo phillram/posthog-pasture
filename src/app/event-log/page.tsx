@@ -64,23 +64,24 @@ export default function EventLogPage() {
               <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">
                 {eventLog.length} event{eventLog.length !== 1 ? "s" : ""} captured
               </h2>
-              {eventLog.length >= 100 && (
-                <span className="text-xs text-muted">Showing most recent 100</span>
-              )}
+              {eventLog.length >= 100 && <span className="text-xs text-muted">Showing most recent 100</span>}
             </div>
             <div className="space-y-2">
               {eventLog.map((entry) => (
-                <div key={entry.id} className="flex items-start gap-3 text-sm border-b border-border/50 pb-2 animate-fade-in">
+                <div
+                  key={entry.id}
+                  className="flex items-start gap-3 text-sm border-b border-border/50 pb-2 animate-fade-in"
+                >
                   <span className="text-muted text-xs font-mono whitespace-nowrap mt-0.5">
                     {entry.timestamp.toLocaleTimeString()}
                   </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${typeBadgeColors[entry.type] || "bg-muted/20 text-muted"}`}>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${typeBadgeColors[entry.type] || "bg-muted/20 text-muted"}`}
+                  >
                     {entry.type}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className={`font-medium ${typeColors[entry.type] || "text-foreground"}`}>
-                      {entry.name}
-                    </span>
+                    <span className={`font-medium ${typeColors[entry.type] || "text-foreground"}`}>{entry.name}</span>
                     {entry.properties && Object.keys(entry.properties).length > 0 && (
                       <pre className="text-xs text-muted mt-1 font-mono overflow-x-auto">
                         {JSON.stringify(entry.properties, null, 2)}

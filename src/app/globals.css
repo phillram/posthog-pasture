@@ -59,16 +59,27 @@ body {
 
 /* Custom animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(249, 115, 22, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.6); }
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.6);
+  }
 }
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;

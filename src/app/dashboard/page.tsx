@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import type { Survey } from "posthog-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
+import ToastStack from "@/components/ToastStack";
+import SurveyCard from "@/components/SurveyCard";
+import { useToast } from "@/hooks/useToast";
 
 import HedgehogGif from "@/components/HedgehogGif";
 
@@ -32,7 +36,13 @@ export default function DashboardPage() {
 
   // Custom event form
   const [customEventName, setCustomEventName] = useState("button_clicked");
-  const [customEventProps, setCustomEventProps] = useState(JSON.stringify({ button_name: "signup_cta", page: "pricing", variant: "B", timestamp: new Date().toISOString() }, null, 2));
+  const [customEventProps, setCustomEventProps] = useState(
+    JSON.stringify(
+      { button_name: "signup_cta", page: "pricing", variant: "B", timestamp: new Date().toISOString() },
+      null,
+      2
+    )
+  );
 
   // Exception form
   const [exceptionMessage, setExceptionMessage] = useState("Cannot read properties of undefined (reading 'map')");
@@ -42,7 +52,7 @@ export default function DashboardPage() {
   const [throwReal, setThrowReal] = useState(false);
 
   // JS Utilities form
-  const [jsCode, setJsCode] = useState('document.title');
+  const [jsCode, setJsCode] = useState("document.title");
   const [jsResult, setJsResult] = useState("");
 
   // PostHog Console
@@ -67,8 +77,7 @@ export default function DashboardPage() {
   const [activeGroups, setActiveGroups] = useState<Record<string, unknown> | null>(null);
 
   // Surveys
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [surveys, setSurveys] = useState<any[]>([]);
+  const [surveys, setSurveys] = useState<Survey[]>([]);
   const [surveyLoading, setSurveyLoading] = useState(false);
 
   // Experiments — flag override
@@ -76,12 +85,7 @@ export default function DashboardPage() {
   const [overrideValue, setOverrideValue] = useState("");
 
   // Toast notifications
-  const [toasts, setToasts] = useState<{ id: string; message: string; type: "success" | "error" | "info" }[]>([]);
-  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
-    const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2500);
-  }, []);
+  const { toasts, showToast } = useToast();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -221,13 +225,25 @@ export default function DashboardPage() {
       const posthogRef = posthogMod.default;
       const fn = new Function("posthog", `return ${phCommand}`);
       const result = fn(posthogRef);
-      const output = result === undefined ? "undefined" : (typeof result === "object" ? JSON.stringify(result, null, 2) : String(result));
+      const output =
+        result === undefined
+          ? "undefined"
+          : typeof result === "object"
+            ? JSON.stringify(result, null, 2)
+            : String(result);
       setPhHistory((prev) => [{ command: phCommand, result: output, isError: false }, ...prev.slice(0, 49)]);
       addLog({ type: "event", name: "Console Command", properties: { command: phCommand, result: output } });
       showToast("Command executed");
     } catch (e) {
-      setPhHistory((prev) => [{ command: phCommand, result: (e as Error).message, isError: true }, ...prev.slice(0, 49)]);
-      addLog({ type: "error", name: "Console Command Error", properties: { command: phCommand, error: (e as Error).message } });
+      setPhHistory((prev) => [
+        { command: phCommand, result: (e as Error).message, isError: true },
+        ...prev.slice(0, 49),
+      ]);
+      addLog({
+        type: "error",
+        name: "Console Command Error",
+        properties: { command: phCommand, error: (e as Error).message },
+      });
       showToast(`Error: ${(e as Error).message}`, "error");
     }
   };
@@ -239,20 +255,65 @@ export default function DashboardPage() {
     {
       label: "Event Tracking",
       events: [
-        { name: "Button Clicked", event: "pasture_button_clicked", props: { button_name: "cta", page: "dashboard" }, color: "bg-primary hover:bg-primary-hover" },
-        { name: "Page Viewed", event: "$pageview", props: { $current_url: typeof window !== "undefined" ? window.location.href : "/dashboard" }, color: "bg-success/80 hover:bg-success" },
-        { name: "Feature Used", event: "pasture_feature_used", props: { feature: "analytics", duration_ms: 1234 }, color: "bg-accent hover:bg-accent-hover" },
-        { name: "Item Purchased", event: "pasture_purchase", props: { item: "hedgehog_plush", price: 29.99, currency: "USD" }, color: "bg-warning/80 hover:bg-warning" },
-        { name: "Form Submitted", event: "pasture_form_submitted", props: { form_name: "contact", fields_count: 5 }, color: "bg-blue-600 hover:bg-blue-500" },
-        { name: "Sign Up Started", event: "pasture_signup_started", props: { source: "landing_page", variant: "A" }, color: "bg-teal-600 hover:bg-teal-500" },
-        { name: "Search Performed", event: "pasture_search", props: { query: "hedgehog care", results_count: 42 }, color: "bg-pink-600 hover:bg-pink-500" },
-        { name: "Capture Pageview", event: "__capture_pageview", props: {}, color: "bg-success/60 hover:bg-success/80" },
+        {
+          name: "Button Clicked",
+          event: "pasture_button_clicked",
+          props: { button_name: "cta", page: "dashboard" },
+          color: "bg-primary hover:bg-primary-hover",
+        },
+        {
+          name: "Page Viewed",
+          event: "$pageview",
+          props: { $current_url: typeof window !== "undefined" ? window.location.href : "/dashboard" },
+          color: "bg-success/80 hover:bg-success",
+        },
+        {
+          name: "Feature Used",
+          event: "pasture_feature_used",
+          props: { feature: "analytics", duration_ms: 1234 },
+          color: "bg-accent hover:bg-accent-hover",
+        },
+        {
+          name: "Item Purchased",
+          event: "pasture_purchase",
+          props: { item: "hedgehog_plush", price: 29.99, currency: "USD" },
+          color: "bg-warning/80 hover:bg-warning",
+        },
+        {
+          name: "Form Submitted",
+          event: "pasture_form_submitted",
+          props: { form_name: "contact", fields_count: 5 },
+          color: "bg-blue-600 hover:bg-blue-500",
+        },
+        {
+          name: "Sign Up Started",
+          event: "pasture_signup_started",
+          props: { source: "landing_page", variant: "A" },
+          color: "bg-teal-600 hover:bg-teal-500",
+        },
+        {
+          name: "Search Performed",
+          event: "pasture_search",
+          props: { query: "hedgehog care", results_count: 42 },
+          color: "bg-pink-600 hover:bg-pink-500",
+        },
+        {
+          name: "Capture Pageview",
+          event: "__capture_pageview",
+          props: {},
+          color: "bg-success/60 hover:bg-success/80",
+        },
       ],
     },
     {
       label: "Error Tracking",
       events: [
-        { name: "Error Occurred", event: "$exception", props: { __use_capture_exception: true, message: "Something went wrong", type: "RuntimeError" }, color: "bg-error/80 hover:bg-error" },
+        {
+          name: "Error Occurred",
+          event: "$exception",
+          props: { __use_capture_exception: true, message: "Something went wrong", type: "RuntimeError" },
+          color: "bg-error/80 hover:bg-error",
+        },
       ],
     },
     {
@@ -265,7 +326,8 @@ export default function DashboardPage() {
   ];
 
   const getQuickEventTooltip = (qe: QuickEvent) => {
-    if (qe.event === "__capture_pageview") return "Captures a $pageview event for the current URL via posthog.capture('$pageview')";
+    if (qe.event === "__capture_pageview")
+      return "Captures a $pageview event for the current URL via posthog.capture('$pageview')";
     if (qe.event === "__start_recording") return "Starts session recording via posthog.startSessionRecording()";
     if (qe.event === "__stop_recording") return "Stops session recording via posthog.stopSessionRecording()";
     const { __use_capture_exception, ...displayProps } = qe.props;
@@ -283,7 +345,7 @@ export default function DashboardPage() {
     } else if (qe.event === "__stop_recording") {
       stopSessionRecording();
       showToast("Session recording stopped", "info");
-    } else if ('__use_capture_exception' in qe.props) {
+    } else if ("__use_capture_exception" in qe.props) {
       captureException({ message: qe.props.message as string, type: qe.props.type as string, source: "Quick Events" });
       showToast(`"${qe.name}" sent`);
     } else {
@@ -299,26 +361,27 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Dashboard
-            </h1>
-            <p className="text-muted text-sm">
-              Welcome, {user?.name || "Guest"}! Fire some PostHog events.
-            </p>
+            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-muted text-sm">Welcome, {user?.name || "Guest"}! Fire some PostHog events.</p>
           </div>
           <HedgehogGif index={0} size="sm" />
         </div>
 
         {!isInitialized && (
           <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 text-warning text-sm">
-            PostHog is not connected. Events will not be sent. <button onClick={() => router.push("/")} className="underline font-medium">Set up your API key</button>
+            PostHog is not connected. Events will not be sent.{" "}
+            <button onClick={() => router.push("/")} className="underline font-medium">
+              Set up your API key
+            </button>
           </div>
         )}
 
         {/* Quick Events */}
         <section className="bg-card border border-border rounded-xl p-6">
           <h2 className="text-lg font-semibold text-foreground mb-4">Quick Events</h2>
-          <p className="text-muted text-sm mb-4">Click any button to fire that event to PostHog immediately. Hover for payload details.</p>
+          <p className="text-muted text-sm mb-4">
+            Click any button to fire that event to PostHog immediately. Hover for payload details.
+          </p>
           <div className="space-y-4">
             {quickEventGroups.map((group, gi) => (
               <div key={group.label}>
@@ -367,7 +430,10 @@ export default function DashboardPage() {
                   rows={3}
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
                 />
-                <button onClick={handleCustomEvent} className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm">
+                <button
+                  onClick={handleCustomEvent}
+                  className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                >
                   Capture Event
                 </button>
               </div>
@@ -384,7 +450,10 @@ export default function DashboardPage() {
                   rows={2}
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
                 />
-                <button onClick={handleSuperProps} className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm">
+                <button
+                  onClick={handleSuperProps}
+                  className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                >
                   Register Super Properties
                 </button>
                 <div className="flex gap-2">
@@ -395,7 +464,17 @@ export default function DashboardPage() {
                     placeholder="key_to_remove"
                     className="flex-1 px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
                   />
-                  <button onClick={() => { if (superKeyToRemove.trim()) { unregisterSuperProperty(superKeyToRemove); showToast(`Super property "${superKeyToRemove}" removed`, "info"); setSuperKeyToRemove(""); setActiveSuperProps(null); } }} className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm">
+                  <button
+                    onClick={() => {
+                      if (superKeyToRemove.trim()) {
+                        unregisterSuperProperty(superKeyToRemove);
+                        showToast(`Super property "${superKeyToRemove}" removed`, "info");
+                        setSuperKeyToRemove("");
+                        setActiveSuperProps(null);
+                      }
+                    }}
+                    className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+                  >
                     Unregister
                   </button>
                 </div>
@@ -422,7 +501,12 @@ export default function DashboardPage() {
                   <div className="bg-input-bg border border-border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs font-semibold text-muted">Active Super Properties</p>
-                      <button onClick={() => setActiveSuperProps(null)} className="text-xs text-muted hover:text-foreground transition-colors">Dismiss</button>
+                      <button
+                        onClick={() => setActiveSuperProps(null)}
+                        className="text-xs text-muted hover:text-foreground transition-colors"
+                      >
+                        Dismiss
+                      </button>
                     </div>
                     {Object.keys(activeSuperProps).length > 0 ? (
                       <pre className="text-xs font-mono text-foreground/80 overflow-x-auto">
@@ -448,9 +532,14 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="text-base font-semibold text-foreground">Custom Exception</h3>
-                <p className="text-muted text-xs mt-1">Create a custom $exception event with full control over error details.</p>
+                <p className="text-muted text-xs mt-1">
+                  Create a custom $exception event with full control over error details.
+                </p>
               </div>
-              <button onClick={triggerError} className="py-2 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm">
+              <button
+                onClick={triggerError}
+                className="py-2 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+              >
                 Quick Trigger Error
               </button>
             </div>
@@ -506,14 +595,22 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => { setThrowReal(!throwReal); showToast(throwReal ? "Real throw disabled" : "Real throw enabled", "info"); }}
+                  onClick={() => {
+                    setThrowReal(!throwReal);
+                    showToast(throwReal ? "Real throw disabled" : "Real throw enabled", "info");
+                  }}
                   className={`relative w-10 h-5 rounded-full transition-colors ${throwReal ? "bg-error" : "bg-muted/30"}`}
                 >
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${throwReal ? "translate-x-5" : "translate-x-0"}`} />
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${throwReal ? "translate-x-5" : "translate-x-0"}`}
+                  />
                 </button>
                 <span className="text-xs text-muted">Throw real JS error (includes stack trace)</span>
               </div>
-              <button onClick={handleCustomException} className="w-full py-2.5 bg-error/80 hover:bg-error text-white font-medium rounded-lg transition-colors text-sm">
+              <button
+                onClick={handleCustomException}
+                className="w-full py-2.5 bg-error/80 hover:bg-error text-white font-medium rounded-lg transition-colors text-sm"
+              >
                 Capture Exception
               </button>
             </div>
@@ -528,7 +625,9 @@ export default function DashboardPage() {
           </div>
           <div className="bg-card border border-warning/30 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-muted text-xs">View, reload, and toggle feature flags from your PostHog project. Toggles use client-side overrides.</p>
+              <p className="text-muted text-xs">
+                View, reload, and toggle feature flags from your PostHog project. Toggles use client-side overrides.
+              </p>
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
@@ -555,56 +654,75 @@ export default function DashboardPage() {
             </div>
             {Object.keys(featureFlags).length > 0 ? (
               <div className="space-y-2">
-                {Object.entries(featureFlags).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between px-4 py-2.5 bg-input-bg border border-border rounded-lg">
-                    <code className="text-sm font-mono text-foreground">{key}</code>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                        value === true ? "bg-success/20 text-success"
-                          : value === false ? "bg-error/20 text-error"
-                            : "bg-accent/20 text-accent"
-                      }`}>
-                        {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
-                      </span>
-                      {typeof value === "boolean" ? (
-                        <button
-                          onClick={async () => {
-                            const ph = (await import("posthog-js")).default;
-                            const next = !value;
-                            ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
-                            addLog({ type: "flag", name: `Flag ${next ? "Activated" : "Deactivated"}: ${key}`, properties: { flag: key, from: value, to: next } });
-                            reloadFeatureFlags();
-                            showToast(`"${key}" ${next ? "activated" : "deactivated"}`);
-                          }}
-                          className={`text-xs font-medium px-3 py-1 rounded-lg transition-colors ${
-                            value
-                              ? "bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
-                              : "bg-warning/20 hover:bg-warning/30 text-warning"
+                {Object.entries(featureFlags)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([key, value]) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between px-4 py-2.5 bg-input-bg border border-border rounded-lg"
+                    >
+                      <code className="text-sm font-mono text-foreground">{key}</code>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                            value === true
+                              ? "bg-success/20 text-success"
+                              : value === false
+                                ? "bg-error/20 text-error"
+                                : "bg-accent/20 text-accent"
                           }`}
                         >
-                          {value ? "Deactivate" : "Activate"}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={async () => {
-                            const ph = (await import("posthog-js")).default;
-                            const next = value === "control" ? "test" : "control";
-                            ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
-                            addLog({ type: "flag", name: `Flag Switched: ${key}`, properties: { flag: key, from: value, to: next } });
-                            reloadFeatureFlags();
-                            showToast(`"${key}" switched to "${next}"`);
-                          }}
-                          className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-accent/20 hover:bg-accent/30 text-accent"
-                        >
-                          Switch
-                        </button>
-                      )}
+                          {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
+                        </span>
+                        {typeof value === "boolean" ? (
+                          <button
+                            onClick={async () => {
+                              const ph = (await import("posthog-js")).default;
+                              const next = !value;
+                              ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
+                              addLog({
+                                type: "flag",
+                                name: `Flag ${next ? "Activated" : "Deactivated"}: ${key}`,
+                                properties: { flag: key, from: value, to: next },
+                              });
+                              reloadFeatureFlags();
+                              showToast(`"${key}" ${next ? "activated" : "deactivated"}`);
+                            }}
+                            className={`text-xs font-medium px-3 py-1 rounded-lg transition-colors ${
+                              value
+                                ? "bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
+                                : "bg-warning/20 hover:bg-warning/30 text-warning"
+                            }`}
+                          >
+                            {value ? "Deactivate" : "Activate"}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              const ph = (await import("posthog-js")).default;
+                              const next = value === "control" ? "test" : "control";
+                              ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
+                              addLog({
+                                type: "flag",
+                                name: `Flag Switched: ${key}`,
+                                properties: { flag: key, from: value, to: next },
+                              });
+                              reloadFeatureFlags();
+                              showToast(`"${key}" switched to "${next}"`);
+                            }}
+                            className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-accent/20 hover:bg-accent/30 text-accent"
+                          >
+                            Switch
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             ) : (
-              <p className="text-muted text-sm text-center py-4">No feature flags loaded. Click &quot;Reload Flags&quot; to fetch them.</p>
+              <p className="text-muted text-sm text-center py-4">
+                No feature flags loaded. Click &quot;Reload Flags&quot; to fetch them.
+              </p>
             )}
           </div>
         </section>
@@ -616,7 +734,9 @@ export default function DashboardPage() {
             <h2 className="text-lg font-semibold text-foreground">Experiments</h2>
           </div>
           <div className="bg-card border border-purple-500/30 rounded-xl p-6">
-            <p className="text-muted text-xs mb-4">Override feature flag values client-side to simulate experiment variants.</p>
+            <p className="text-muted text-xs mb-4">
+              Override feature flag values client-side to simulate experiment variants.
+            </p>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -641,7 +761,11 @@ export default function DashboardPage() {
                     const ph = (await import("posthog-js")).default;
                     const val = overrideValue === "true" ? true : overrideValue === "false" ? false : overrideValue;
                     ph.featureFlags.overrideFeatureFlags({ flags: { [overrideKey.trim()]: val } });
-                    addLog({ type: "flag", name: `Flag Override: ${overrideKey.trim()}`, properties: { flag: overrideKey.trim(), value: val } });
+                    addLog({
+                      type: "flag",
+                      name: `Flag Override: ${overrideKey.trim()}`,
+                      properties: { flag: overrideKey.trim(), value: val },
+                    });
                     showToast(`Flag "${overrideKey}" overridden to "${overrideValue}"`);
                   }}
                   className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg transition-colors text-sm"
@@ -665,23 +789,36 @@ export default function DashboardPage() {
                   <hr className="border-border" />
                   <p className="text-xs text-muted font-semibold">Quick override — click a flag to cycle its value:</p>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(featureFlags).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => (
-                      <button
-                        key={key}
-                        onClick={async () => {
-                          const ph = (await import("posthog-js")).default;
-                          const next = value === true ? false : value === false ? true : value === "control" ? "test" : "control";
-                          ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
-                          addLog({ type: "flag", name: `Flag Toggle: ${key}`, properties: { flag: key, from: value, to: next } });
-                          reloadFeatureFlags();
-                          showToast(`"${key}" → ${String(next)}`);
-                        }}
-                        className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs rounded-lg transition-colors font-mono"
-                        title={`Current: ${String(value)} — click to toggle`}
-                      >
-                        {key}: {String(value)}
-                      </button>
-                    ))}
+                    {Object.entries(featureFlags)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([key, value]) => (
+                        <button
+                          key={key}
+                          onClick={async () => {
+                            const ph = (await import("posthog-js")).default;
+                            const next =
+                              value === true
+                                ? false
+                                : value === false
+                                  ? true
+                                  : value === "control"
+                                    ? "test"
+                                    : "control";
+                            ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
+                            addLog({
+                              type: "flag",
+                              name: `Flag Toggle: ${key}`,
+                              properties: { flag: key, from: value, to: next },
+                            });
+                            reloadFeatureFlags();
+                            showToast(`"${key}" → ${String(next)}`);
+                          }}
+                          className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs rounded-lg transition-colors font-mono"
+                          title={`Current: ${String(value)} — click to toggle`}
+                        >
+                          {key}: {String(value)}
+                        </button>
+                      ))}
                   </div>
                 </>
               )}
@@ -706,7 +843,11 @@ export default function DashboardPage() {
                     ph.getSurveys((s) => {
                       setSurveys(s);
                       setSurveyLoading(false);
-                      addLog({ type: "event", name: "All Surveys Loaded", properties: { count: s.length, surveys: s.map((sv: { id: string; name: string }) => sv.name) } });
+                      addLog({
+                        type: "event",
+                        name: "All Surveys Loaded",
+                        properties: { count: s.length, surveys: s.map((sv) => sv.name) },
+                      });
                       showToast(`${s.length} survey${s.length !== 1 ? "s" : ""} loaded`);
                     }, true);
                   }}
@@ -721,7 +862,11 @@ export default function DashboardPage() {
                     ph.getActiveMatchingSurveys((s) => {
                       setSurveys(s);
                       setSurveyLoading(false);
-                      addLog({ type: "event", name: "Matching Surveys Loaded", properties: { count: s.length, surveys: s.map((sv: { id: string; name: string }) => sv.name) } });
+                      addLog({
+                        type: "event",
+                        name: "Matching Surveys Loaded",
+                        properties: { count: s.length, surveys: s.map((sv) => sv.name) },
+                      });
                       showToast(`${s.length} matching survey${s.length !== 1 ? "s" : ""} loaded`);
                     }, true);
                   }}
@@ -734,45 +879,55 @@ export default function DashboardPage() {
             {surveys.length > 0 ? (
               <div className="space-y-3">
                 {surveys.map((survey) => (
-                  <div key={survey.id} className="bg-input-bg border border-border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{survey.name}</p>
-                        <p className="text-xs text-muted">{survey.type} &middot; {survey.questions?.length || 0} question{(survey.questions?.length || 0) !== 1 ? "s" : ""}</p>
-                      </div>
-                      {survey.type === "popover" && (
-                        <button
-                          onClick={async () => {
-                            const ph = (await import("posthog-js")).default;
-                            ph.renderSurvey(survey.id, "body");
-                            addLog({ type: "event", name: `Survey Triggered: ${survey.name}`, properties: { surveyId: survey.id, surveyName: survey.name } });
-                            showToast(`Survey "${survey.name}" triggered`);
-                          }}
-                          className="py-1.5 px-3 bg-pink-600 hover:bg-pink-500 text-white font-medium rounded-lg transition-colors text-xs"
-                        >
-                          Trigger
-                        </button>
-                      )}
-                    </div>
-                    {survey.description && (
-                      <p className="text-xs text-muted mb-2">{survey.description}</p>
-                    )}
-                    <details className="group">
-                      <summary className="text-xs text-muted cursor-pointer hover:text-foreground transition-colors">Questions</summary>
-                      <div className="mt-2 space-y-1.5">
-                        {survey.questions?.map((q: { question: string; type: string }, qi: number) => (
-                          <div key={qi} className="text-xs text-foreground/80 flex items-start gap-2">
-                            <span className="text-muted shrink-0">{qi + 1}.</span>
-                            <span>{q.question} <span className="text-muted">({q.type})</span></span>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  </div>
+                  <SurveyCard
+                    key={survey.id}
+                    survey={survey}
+                    onTrigger={async (s) => {
+                      const ph = (await import("posthog-js")).default;
+                      ph.renderSurvey(s.id, "body");
+                      addLog({
+                        type: "event",
+                        name: `Survey Triggered: ${s.name}`,
+                        properties: { surveyId: s.id, surveyName: s.name },
+                      });
+                      showToast(`Survey "${s.name}" triggered`);
+                    }}
+                    onPreview={async (s) => {
+                      const ph = (await import("posthog-js")).default;
+                      // renderSurvey bypasses targeting, so it doubles as a preview
+                      ph.renderSurvey(s.id, "body");
+                      addLog({
+                        type: "event",
+                        name: `Survey Previewed: ${s.name}`,
+                        properties: { surveyId: s.id, surveyName: s.name, preview: true },
+                      });
+                      showToast(`Previewing "${s.name}"`, "info");
+                    }}
+                    onSubmit={(s, responses) => {
+                      const payload: Record<string, unknown> = {
+                        $survey_id: s.id,
+                        $survey_name: s.name,
+                      };
+                      responses.forEach((value, idx) => {
+                        payload[`$survey_response_${idx}`] = value;
+                      });
+                      captureEvent("survey sent", payload);
+                      showToast(`Response submitted for "${s.name}"`);
+                    }}
+                    onDismiss={(s) => {
+                      captureEvent("survey dismissed", {
+                        $survey_id: s.id,
+                        $survey_name: s.name,
+                      });
+                      showToast(`Dismissed "${s.name}"`, "info");
+                    }}
+                  />
                 ))}
               </div>
             ) : (
-              <p className="text-muted text-sm text-center py-4">No surveys loaded. Click &quot;Load Surveys&quot; to fetch active surveys.</p>
+              <p className="text-muted text-sm text-center py-4">
+                No surveys loaded. Click &quot;Load Surveys&quot; to fetch active surveys.
+              </p>
             )}
           </div>
         </section>
@@ -787,7 +942,9 @@ export default function DashboardPage() {
             {/* Identify User */}
             <div className="bg-card border border-border rounded-xl p-6">
               <h3 className="text-base font-semibold text-foreground mb-3">Identify User</h3>
-              <p className="text-muted text-xs mb-3">Link the current anonymous user to a distinct ID with properties.</p>
+              <p className="text-muted text-xs mb-3">
+                Link the current anonymous user to a distinct ID with properties.
+              </p>
               <div className="space-y-3">
                 <input
                   type="text"
@@ -803,10 +960,19 @@ export default function DashboardPage() {
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
                 />
                 <div className="flex gap-2">
-                  <button onClick={handleIdentify} className="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm">
+                  <button
+                    onClick={handleIdentify}
+                    className="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
+                  >
                     Identify
                   </button>
-                  <button onClick={() => { resetPerson(); showToast("Person reset", "info"); }} className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm">
+                  <button
+                    onClick={() => {
+                      resetPerson();
+                      showToast("Person reset", "info");
+                    }}
+                    className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+                  >
                     Reset
                   </button>
                 </div>
@@ -816,7 +982,9 @@ export default function DashboardPage() {
             {/* Group Identify */}
             <div className="bg-card border border-border rounded-xl p-6">
               <h3 className="text-base font-semibold text-foreground mb-3">Group Identify</h3>
-              <p className="text-muted text-xs mb-3">Associate the current user with a group (company, project, etc).</p>
+              <p className="text-muted text-xs mb-3">
+                Associate the current user with a group (company, project, etc).
+              </p>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -835,7 +1003,10 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleGroupIdentify} className="flex-1 py-2.5 bg-warning/80 hover:bg-warning text-black font-medium rounded-lg transition-colors text-sm">
+                  <button
+                    onClick={handleGroupIdentify}
+                    className="flex-1 py-2.5 bg-warning/80 hover:bg-warning text-black font-medium rounded-lg transition-colors text-sm"
+                  >
                     Group Identify
                   </button>
                   <button
@@ -843,8 +1014,16 @@ export default function DashboardPage() {
                       const ph = (await import("posthog-js")).default;
                       const groups = ph.getGroups();
                       setActiveGroups(groups as Record<string, unknown>);
-                      addLog({ type: "group", name: "Current Groups Viewed", properties: groups as Record<string, unknown> });
-                      showToast(Object.keys(groups).length > 0 ? `${Object.keys(groups).length} group(s) found` : "No groups set");
+                      addLog({
+                        type: "group",
+                        name: "Current Groups Viewed",
+                        properties: groups as Record<string, unknown>,
+                      });
+                      showToast(
+                        Object.keys(groups).length > 0
+                          ? `${Object.keys(groups).length} group(s) found`
+                          : "No groups set"
+                      );
                     }}
                     className="py-2.5 px-4 bg-warning/20 hover:bg-warning/30 text-warning font-medium rounded-lg transition-colors text-sm"
                     title="Show current group associations"
@@ -856,7 +1035,12 @@ export default function DashboardPage() {
                   <div className="bg-input-bg border border-border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs font-semibold text-muted">Current Groups</p>
-                      <button onClick={() => setActiveGroups(null)} className="text-xs text-muted hover:text-foreground transition-colors">Dismiss</button>
+                      <button
+                        onClick={() => setActiveGroups(null)}
+                        className="text-xs text-muted hover:text-foreground transition-colors"
+                      >
+                        Dismiss
+                      </button>
                     </div>
                     {Object.keys(activeGroups).length > 0 ? (
                       <pre className="text-xs font-mono text-foreground/80 overflow-x-auto">
@@ -873,7 +1057,9 @@ export default function DashboardPage() {
             {/* Person Properties */}
             <div className="bg-card border border-border rounded-xl p-6">
               <h3 className="text-base font-semibold text-foreground mb-3">Person Properties</h3>
-              <p className="text-muted text-xs mb-3">Set properties on the current person without needing to re-identify.</p>
+              <p className="text-muted text-xs mb-3">
+                Set properties on the current person without needing to re-identify.
+              </p>
               <div className="space-y-3">
                 <textarea
                   value={personProps}
@@ -881,7 +1067,10 @@ export default function DashboardPage() {
                   rows={3}
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
                 />
-                <button onClick={handlePersonProps} className="w-full py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm">
+                <button
+                  onClick={handlePersonProps}
+                  className="w-full py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
+                >
                   Set Person Properties
                 </button>
               </div>
@@ -899,7 +1088,9 @@ export default function DashboardPage() {
           {/* JS Sandbox */}
           <div className="bg-card border border-accent/30 rounded-xl p-6 mb-6">
             <h3 className="text-base font-semibold text-foreground mb-3">JavaScript Sandbox</h3>
-            <p className="text-muted text-xs mb-3">Run JavaScript expressions. Results are captured as events. Errors are captured as exceptions.</p>
+            <p className="text-muted text-xs mb-3">
+              Run JavaScript expressions. Results are captured as events. Errors are captured as exceptions.
+            </p>
             <div className="space-y-3">
               <textarea
                 value={jsCode}
@@ -909,32 +1100,51 @@ export default function DashboardPage() {
                 className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
               />
               <div className="flex gap-2">
-                <button onClick={handleRunJs} className="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm">
+                <button
+                  onClick={handleRunJs}
+                  className="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
+                >
                   Run & Capture
                 </button>
                 <button
-                  onClick={() => { setJsCode('navigator.userAgent'); setJsResult(""); showToast("Snippet loaded", "info"); }}
+                  onClick={() => {
+                    setJsCode("navigator.userAgent");
+                    setJsResult("");
+                    showToast("Snippet loaded", "info");
+                  }}
                   className="py-2.5 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs"
                   title="navigator.userAgent"
                 >
                   UA
                 </button>
                 <button
-                  onClick={() => { setJsCode('window.screen.width + "x" + window.screen.height'); setJsResult(""); showToast("Snippet loaded", "info"); }}
+                  onClick={() => {
+                    setJsCode('window.screen.width + "x" + window.screen.height');
+                    setJsResult("");
+                    showToast("Snippet loaded", "info");
+                  }}
                   className="py-2.5 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs"
                   title="Screen size"
                 >
                   Screen
                 </button>
                 <button
-                  onClick={() => { setJsCode('performance.now().toFixed(2) + "ms"'); setJsResult(""); showToast("Snippet loaded", "info"); }}
+                  onClick={() => {
+                    setJsCode('performance.now().toFixed(2) + "ms"');
+                    setJsResult("");
+                    showToast("Snippet loaded", "info");
+                  }}
                   className="py-2.5 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs"
                   title="Performance timing"
                 >
                   Perf
                 </button>
                 <button
-                  onClick={() => { setJsCode('document.cookie || "(no cookies)"'); setJsResult(""); showToast("Snippet loaded", "info"); }}
+                  onClick={() => {
+                    setJsCode('document.cookie || "(no cookies)"');
+                    setJsResult("");
+                    showToast("Snippet loaded", "info");
+                  }}
                   className="py-2.5 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs"
                   title="Cookies"
                 >
@@ -950,7 +1160,10 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted font-semibold">Quick snippets:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    { label: "Location", code: "JSON.stringify({href: location.href, host: location.host, path: location.pathname})" },
+                    {
+                      label: "Location",
+                      code: "JSON.stringify({href: location.href, host: location.host, path: location.pathname})",
+                    },
                     { label: "localStorage keys", code: "Object.keys(localStorage)" },
                     { label: "Online?", code: "navigator.onLine" },
                     { label: "Language", code: "navigator.language" },
@@ -961,7 +1174,11 @@ export default function DashboardPage() {
                   ].map((s) => (
                     <button
                       key={s.label}
-                      onClick={() => { setJsCode(s.code); setJsResult(""); showToast(`"${s.label}" loaded`, "info"); }}
+                      onClick={() => {
+                        setJsCode(s.code);
+                        setJsResult("");
+                        showToast(`"${s.label}" loaded`, "info");
+                      }}
                       className="px-2 py-1 bg-accent/10 hover:bg-accent/20 text-accent text-xs rounded transition-colors"
                     >
                       {s.label}
@@ -978,7 +1195,9 @@ export default function DashboardPage() {
               <div>
                 <h3 className="text-base font-semibold text-foreground">PostHog Console</h3>
                 <p className="text-muted text-xs mt-1">
-                  Run posthog-js commands directly, just like in the browser console. Use <code className="bg-input-bg px-1.5 py-0.5 rounded text-primary font-mono text-xs">posthog</code> as the reference.
+                  Run posthog-js commands directly, just like in the browser console. Use{" "}
+                  <code className="bg-input-bg px-1.5 py-0.5 rounded text-primary font-mono text-xs">posthog</code> as
+                  the reference.
                 </p>
               </div>
               <a
@@ -996,20 +1215,35 @@ export default function DashboardPage() {
                 <textarea
                   value={phCommand}
                   onChange={(e) => setPhCommand(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handlePhCommand(); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      handlePhCommand();
+                    }
+                  }}
                   rows={3}
                   placeholder="posthog.capture('my_event', { key: 'value' })"
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono pr-28"
                 />
                 <kbd className="absolute bottom-2.5 right-2.5 pointer-events-none inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-background border border-border rounded text-xs text-muted font-sans select-none">
-                  <span>⌘</span><span>↵</span>
+                  <span>⌘</span>
+                  <span>↵</span>
                 </kbd>
               </div>
               <div className="flex gap-2 items-center">
-                <button onClick={handlePhCommand} className="py-2.5 px-6 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm">
+                <button
+                  onClick={handlePhCommand}
+                  className="py-2.5 px-6 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                >
                   Execute
                 </button>
-                <button onClick={() => { setPhHistory([]); showToast("History cleared", "info"); }} className="ml-auto py-2 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs">
+                <button
+                  onClick={() => {
+                    setPhHistory([]);
+                    showToast("History cleared", "info");
+                  }}
+                  className="ml-auto py-2 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs"
+                >
                   Clear History
                 </button>
               </div>
@@ -1041,7 +1275,10 @@ export default function DashboardPage() {
                 ].map((cmd) => (
                   <button
                     key={cmd.label}
-                    onClick={() => { setPhCommand(cmd.code); showToast(`"${cmd.label}" loaded`, "info"); }}
+                    onClick={() => {
+                      setPhCommand(cmd.code);
+                      showToast(`"${cmd.label}" loaded`, "info");
+                    }}
                     className="px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs rounded transition-colors font-mono"
                   >
                     {cmd.label}
@@ -1062,7 +1299,9 @@ export default function DashboardPage() {
                     <code className="block text-primary/80">posthog.capture(event, properties?)</code>
                     <code className="block text-primary/80">posthog.capture(&apos;$pageview&apos;)</code>
                     <code className="block text-primary/80">posthog.capture(&apos;$pageleave&apos;)</code>
-                    <code className="block text-primary/80">posthog.capture(&apos;$screen&apos;, &#123; $screen_name &#125;)</code>
+                    <code className="block text-primary/80">
+                      posthog.capture(&apos;$screen&apos;, &#123; $screen_name &#125;)
+                    </code>
                   </div>
                   <div className="bg-input-bg rounded-lg p-3 space-y-1.5">
                     <p className="font-semibold text-foreground">Identity</p>
@@ -1099,13 +1338,28 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <a href="https://posthog.com/docs/libraries/js" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors underline">
+                  <a
+                    href="https://posthog.com/docs/libraries/js"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary-hover transition-colors underline"
+                  >
                     posthog-js Documentation
                   </a>
-                  <a href="https://posthog.com/docs/api" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors underline">
+                  <a
+                    href="https://posthog.com/docs/api"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary-hover transition-colors underline"
+                  >
                     PostHog API Reference
                   </a>
-                  <a href="https://posthog.com/docs/data/events" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors underline">
+                  <a
+                    href="https://posthog.com/docs/data/events"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary-hover transition-colors underline"
+                  >
                     Event Types Guide
                   </a>
                 </div>
@@ -1117,17 +1371,25 @@ export default function DashboardPage() {
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 <p className="text-xs text-muted font-semibold">History:</p>
                 {phHistory.map((entry, i) => (
-                  <div key={i} className={`bg-input-bg rounded-lg p-3 border ${entry.isError ? "border-error/30" : "border-border/50"}`}>
+                  <div
+                    key={i}
+                    className={`bg-input-bg rounded-lg p-3 border ${entry.isError ? "border-error/30" : "border-border/50"}`}
+                  >
                     <div className="flex items-center justify-between mb-1">
                       <code className="text-xs text-muted font-mono truncate flex-1">{entry.command}</code>
                       <button
-                        onClick={() => { setPhCommand(entry.command); showToast("Command loaded", "info"); }}
+                        onClick={() => {
+                          setPhCommand(entry.command);
+                          showToast("Command loaded", "info");
+                        }}
                         className="ml-2 text-xs text-primary hover:text-primary-hover transition-colors shrink-0"
                       >
                         Reuse
                       </button>
                     </div>
-                    <pre className={`text-xs font-mono overflow-x-auto ${entry.isError ? "text-error" : "text-foreground/80"}`}>
+                    <pre
+                      className={`text-xs font-mono overflow-x-auto ${entry.isError ? "text-error" : "text-foreground/80"}`}
+                    >
                       {entry.result}
                     </pre>
                   </div>
@@ -1136,28 +1398,9 @@ export default function DashboardPage() {
             )}
           </div>
         </section>
-
       </main>
 
-      {/* Toast Notifications */}
-      {toasts.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className={`px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium animate-fade-in ${
-                toast.type === "success"
-                  ? "bg-success text-white"
-                  : toast.type === "error"
-                    ? "bg-error text-white"
-                    : "bg-accent text-white"
-              }`}
-            >
-              {toast.message}
-            </div>
-          ))}
-        </div>
-      )}
+      <ToastStack toasts={toasts} />
     </div>
   );
 }

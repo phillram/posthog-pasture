@@ -9,17 +9,8 @@ import HedgehogGif from "@/components/HedgehogGif";
 
 export default function ConfigPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const {
-    config,
-    isInitialized,
-    updateConfig,
-    resetConfig,
-    initPosthog,
-    resetPerson,
-    optIn,
-    optOut,
-    isOptedOut,
-  } = usePosthog();
+  const { config, isInitialized, updateConfig, resetConfig, initPosthog, resetPerson, optIn, optOut, isOptedOut } =
+    usePosthog();
   const router = useRouter();
 
   const [apiKey, setApiKey] = useState(config.apiKey);
@@ -108,9 +99,21 @@ export default function ConfigPage() {
           <p className="text-muted text-xs">These require re-initialization to take effect.</p>
 
           {[
-            { label: "Autocapture", key: "autocapture" as const, desc: "Automatically capture clicks, inputs, and form submissions" },
-            { label: "Capture Pageview", key: "capturePageview" as const, desc: "Automatically capture $pageview events on page load" },
-            { label: "Capture Pageleave", key: "capturePageleave" as const, desc: "Automatically capture $pageleave events" },
+            {
+              label: "Autocapture",
+              key: "autocapture" as const,
+              desc: "Automatically capture clicks, inputs, and form submissions",
+            },
+            {
+              label: "Capture Pageview",
+              key: "capturePageview" as const,
+              desc: "Automatically capture $pageview events on page load",
+            },
+            {
+              label: "Capture Pageleave",
+              key: "capturePageleave" as const,
+              desc: "Automatically capture $pageleave events",
+            },
           ].map(({ label, key, desc }) => (
             <div key={key} className="flex items-center justify-between py-2 border-b border-border/50">
               <div>
@@ -121,7 +124,9 @@ export default function ConfigPage() {
                 onClick={() => updateConfig({ [key]: !config[key] })}
                 className={`relative w-12 h-6 rounded-full transition-colors ${config[key] ? "bg-success" : "bg-muted/30"}`}
               >
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${config[key] ? "translate-x-6" : "translate-x-0"}`} />
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${config[key] ? "translate-x-6" : "translate-x-0"}`}
+                />
               </button>
             </div>
           ))}
@@ -135,7 +140,9 @@ export default function ConfigPage() {
               onClick={() => updateConfig({ disableSessionRecording: !config.disableSessionRecording })}
               className={`relative w-12 h-6 rounded-full transition-colors ${config.disableSessionRecording ? "bg-error" : "bg-muted/30"}`}
             >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${config.disableSessionRecording ? "translate-x-6" : "translate-x-0"}`} />
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${config.disableSessionRecording ? "translate-x-6" : "translate-x-0"}`}
+              />
             </button>
           </div>
         </section>
@@ -145,13 +152,21 @@ export default function ConfigPage() {
           <h2 className="text-lg font-semibold text-foreground">Privacy & Consent</h2>
           <div className="flex items-center gap-3 mb-2">
             <div className={`w-3 h-3 rounded-full ${isOptedOut ? "bg-error" : "bg-success"}`} />
-            <span className="text-sm text-foreground">{isOptedOut ? "Opted Out — events are NOT being captured" : "Opted In — events are being captured"}</span>
+            <span className="text-sm text-foreground">
+              {isOptedOut ? "Opted Out — events are NOT being captured" : "Opted In — events are being captured"}
+            </span>
           </div>
           <div className="flex gap-3">
-            <button onClick={optIn} className="flex-1 py-3 bg-success/20 hover:bg-success/30 text-success font-medium rounded-lg transition-colors text-sm">
+            <button
+              onClick={optIn}
+              className="flex-1 py-3 bg-success/20 hover:bg-success/30 text-success font-medium rounded-lg transition-colors text-sm"
+            >
               Opt In
             </button>
-            <button onClick={optOut} className="flex-1 py-3 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm">
+            <button
+              onClick={optOut}
+              className="flex-1 py-3 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+            >
               Opt Out
             </button>
           </div>
@@ -166,7 +181,10 @@ export default function ConfigPage() {
               <span className="text-sm font-medium text-foreground">Reset Person Data</span>
               <p className="text-xs text-muted">Generate a new anonymous distinct_id and clear person properties</p>
             </div>
-            <button onClick={resetPerson} className="py-2 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm">
+            <button
+              onClick={resetPerson}
+              className="py-2 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+            >
               Reset Person
             </button>
           </div>
@@ -176,7 +194,10 @@ export default function ConfigPage() {
               <span className="text-sm font-medium text-foreground">Full Reset</span>
               <p className="text-xs text-muted">Disconnect PostHog, clear API key and all settings</p>
             </div>
-            <button onClick={handleFullReset} className="py-2 px-4 bg-error hover:bg-red-600 text-white font-medium rounded-lg transition-colors text-sm">
+            <button
+              onClick={handleFullReset}
+              className="py-2 px-4 bg-error hover:bg-red-600 text-white font-medium rounded-lg transition-colors text-sm"
+            >
               Reset Everything
             </button>
           </div>
