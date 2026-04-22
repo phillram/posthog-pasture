@@ -7,6 +7,7 @@ import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
+import { randomPurchaseProps } from "@/lib/purchase";
 
 import HedgehogGif from "@/components/HedgehogGif";
 
@@ -179,7 +180,8 @@ export default function DashboardPage() {
         {
           name: "Item Purchased",
           event: "pasture_purchase",
-          props: { item: "hedgehog_plush", price: 29.99, currency: "USD" },
+          // Props are regenerated per click in handleQuickEvent — see randomPurchaseProps().
+          props: { item: "hedgehog_<random>", price: "<random 0.01–1000.00>", currency: "USD" },
           color: "bg-warning/80 hover:bg-warning",
         },
         {
@@ -251,6 +253,11 @@ export default function DashboardPage() {
     } else if ("__use_capture_exception" in qe.props) {
       captureException({ message: qe.props.message as string, type: qe.props.type as string, source: "Quick Events" });
       showToast(`"${qe.name}" sent`);
+    } else if (qe.event === "pasture_purchase") {
+      // Regenerate a fresh randomized payload on every click.
+      const purchase = randomPurchaseProps();
+      captureEvent(qe.event, purchase);
+      showToast(`Purchased "${purchase.item}" for $${purchase.price_display}`);
     } else {
       captureEvent(qe.event, qe.props);
       showToast(`"${qe.name}" sent`);

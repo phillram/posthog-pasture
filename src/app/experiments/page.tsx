@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
+import { randomPurchaseProps } from "@/lib/purchase";
 
 // ── Name generation ──────────────────────────────────────────────────────────
 
@@ -70,7 +71,14 @@ function generateUsername(index: number): string {
 // ── Conversion actions ────────────────────────────────────────────────────────
 
 const CONVERSION_ACTIONS = [
-  { label: "Purchase", event: "pasture_purchase", props: { item: "experiment_product", price: 29.99 } },
+  // Purchase props are regenerated per simulated user at batch-build time
+  // (see `runExperiment`) via `randomPurchaseProps()`. The value here is just a
+  // preview for the wizard card.
+  {
+    label: "Purchase",
+    event: "pasture_purchase",
+    props: { item: "hedgehog_<random>", price: "<random $0.01–$1000.00>" },
+  },
   { label: "Sign Up", event: "pasture_signup", props: { source: "experiment" } },
   { label: "Checkout", event: "pasture_checkout_started", props: { cart_value: 49.99 } },
   { label: "Feature Used", event: "pasture_feature_used", props: { feature: "experiment_feature" } },
@@ -241,12 +249,17 @@ export default function ExperimentsPage() {
 
       // Step 4: Fire the conversion event for users who convert
       if (actionCompleted) {
+        // For pasture_purchase, regenerate randomized item + price per user so
+        // each converted simulated user shows up with their own merchandise
+        // and dollar amount in PostHog.
+        const conversionProps =
+          actionInfo.event === "pasture_purchase" ? randomPurchaseProps() : actionInfo.props;
         batchEvents.push({
           event: actionInfo.event,
           distinct_id: username,
           timestamp: ts,
           properties: {
-            ...actionInfo.props,
+            ...conversionProps,
             experiment_flag: selectedFlag,
             $feature_flag: selectedFlag,
             $feature_flag_response: variants[i],
