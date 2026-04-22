@@ -64,6 +64,9 @@ export default function EventLogPage() {
               <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">
                 {eventLog.length} event{eventLog.length !== 1 ? "s" : ""} captured
               </h2>
+              {eventLog.length >= 100 && (
+                <span className="text-xs text-muted">Showing most recent 100</span>
+              )}
             </div>
             <div className="space-y-2">
               {eventLog.map((entry) => (

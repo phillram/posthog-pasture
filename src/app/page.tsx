@@ -56,8 +56,10 @@ export default function SetupPage() {
         return;
       }
     } catch {
-      // Network error or CORS — still allow proceeding but warn
-      setKeyError("Warning: Could not pre-validate key (network error). Proceeding anyway — events may silently fail if the key is wrong.");
+      // Network error or CORS — validation blocked, proceed anyway.
+      // This is common in local dev environments where the /decide endpoint
+      // may be blocked by CORS or a firewall. PostHog will report bad keys
+      // via the SDK debug logs in the console.
     }
 
     setIsValidating(false);

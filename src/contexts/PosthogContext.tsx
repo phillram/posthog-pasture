@@ -133,6 +133,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         posthog.reset();
         initRef.current = false;
       }
+      // Reset flag state so consumers don't see stale flags from the previous project
+      setFlagsReady(false);
+      setFeatureFlags({});
       posthog.init(apiKey, {
         api_host: host,
         autocapture: config.autocapture,
