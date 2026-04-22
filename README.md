@@ -99,9 +99,9 @@ The results view shows totals, conversion rate, a per-variant breakdown, and a t
 
 ### Surveys
 
-Auto-loads the surveys from your PostHog project on arrival. Use **Reload Surveys** to fetch again, or **Matching Only** to filter to surveys that target the current user.
+Auto-loads the surveys from your PostHog project on arrival. By default only **Running** surveys are shown, sorted alphabetically. Flip **"Show all statuses"** to also see drafts, scheduled, and completed surveys. A status breakdown across the top shows how many of each you have. **Reload Surveys** refetches from PostHog.
 
-Each survey card has:
+Each survey card shows its name with a coloured status badge (Draft / Scheduled / Running / Completed) and:
 
 - **Trigger** — render the survey as it would appear in a real in-product popover
 - **Dismiss** — fire a dismissal event
