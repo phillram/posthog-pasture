@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
+import ToastStack from "@/components/ToastStack";
+import { useToast } from "@/hooks/useToast";
 
 import { HedgehogBanner } from "@/components/HedgehogGif";
 
@@ -239,8 +241,26 @@ const categoryColors: Record<string, string> = {
 
 export default function EventsPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { captureEvent, captureException, isInitialized } = usePosthog();
+  const { captureEvent, captureException, registerSuperProperties, unregisterSuperProperty, addLog, isInitialized } =
+    usePosthog();
   const router = useRouter();
+
+  // Custom event form
+  const [customEventName, setCustomEventName] = useState("button_clicked");
+  const [customEventProps, setCustomEventProps] = useState(
+    JSON.stringify(
+      { button_name: "signup_cta", page: "pricing", variant: "B", timestamp: new Date().toISOString() },
+      null,
+      2
+    )
+  );
+
+  // Super properties form
+  const [superProps, setSuperProps] = useState('{"app_version": "1.0.0"}');
+  const [superKeyToRemove, setSuperKeyToRemove] = useState("");
+  const [activeSuperProps, setActiveSuperProps] = useState<Record<string, unknown> | null>(null);
+
+  const { toasts, showToast } = useToast();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -249,6 +269,28 @@ export default function EventsPage() {
   }, [isAuthenticated, isLoading, router]);
 
   if (isLoading || !isAuthenticated) return null;
+
+  const handleCustomEvent = () => {
+    if (!customEventName.trim()) return;
+    const name = customEventName.trim();
+    try {
+      const props = JSON.parse(customEventProps);
+      captureEvent(name, props);
+    } catch {
+      captureEvent(name);
+    }
+    showToast(`Event "${name}" captured`);
+  };
+
+  const handleSuperProps = () => {
+    try {
+      const props = JSON.parse(superProps);
+      registerSuperProperties(props);
+      showToast("Super properties registered");
+    } catch {
+      showToast("Invalid JSON", "error");
+    }
+  };
 
   const handleFireEvent = (event: EventTypeInfo["events"][0]) => {
     if (event.properties && "__use_capture_exception" in event.properties) {
@@ -269,9 +311,9 @@ export default function EventsPage() {
       <Navbar />
       <main className="max-w-5xl mx-auto p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">PostHog Event Reference</h1>
+          <h1 className="text-2xl font-bold text-foreground">Events</h1>
           <p className="text-muted text-sm mt-1">
-            Complete guide to every PostHog event type. Click &quot;Fire Event&quot; to send a demo event.
+            Fire custom events, register super properties, and browse the complete PostHog event reference.
           </p>
         </div>
 
@@ -285,6 +327,135 @@ export default function EventsPage() {
             </button>
           </div>
         )}
+
+        {/* ── Event Tracking ── */}
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-1 h-6 bg-primary rounded-full" />
+            <h2 className="text-lg font-semibold text-foreground">Event Tracking</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Custom Event */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-base font-semibold text-foreground mb-3">Custom Event</h3>
+              <p className="text-muted text-xs mb-3">Send any custom event with optional JSON properties.</p>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={customEventName}
+                  onChange={(e) => setCustomEventName(e.target.value)}
+                  placeholder="event_name"
+                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
+                />
+                <textarea
+                  value={customEventProps}
+                  onChange={(e) => setCustomEventProps(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  rows={3}
+                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
+                />
+                <button
+                  onClick={handleCustomEvent}
+                  className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                >
+                  Capture Event
+                </button>
+              </div>
+            </div>
+
+            {/* Super Properties */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-base font-semibold text-foreground mb-3">Super Properties</h3>
+              <p className="text-muted text-xs mb-3">Register properties that get sent with every subsequent event.</p>
+              <div className="space-y-3">
+                <textarea
+                  value={superProps}
+                  onChange={(e) => setSuperProps(e.target.value)}
+                  rows={2}
+                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
+                />
+                <button
+                  onClick={handleSuperProps}
+                  className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                >
+                  Register Super Properties
+                </button>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={superKeyToRemove}
+                    onChange={(e) => setSuperKeyToRemove(e.target.value)}
+                    placeholder="key_to_remove"
+                    className="flex-1 px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      if (superKeyToRemove.trim()) {
+                        unregisterSuperProperty(superKeyToRemove);
+                        showToast(`Super property "${superKeyToRemove}" removed`, "info");
+                        setSuperKeyToRemove("");
+                        setActiveSuperProps(null);
+                      }
+                    }}
+                    className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+                  >
+                    Unregister
+                  </button>
+                </div>
+                <button
+                  onClick={async () => {
+                    const ph = (await import("posthog-js")).default;
+                    const props = ph.persistence?.properties() || {};
+                    // Filter out internal PostHog properties (start with $)
+                    const userProps: Record<string, unknown> = {};
+                    for (const [k, v] of Object.entries(props)) {
+                      if (!k.startsWith("$") && !k.startsWith("__") && k !== "distinct_id" && k !== "token") {
+                        userProps[k] = v;
+                      }
+                    }
+                    setActiveSuperProps(userProps);
+                    addLog({ type: "config", name: "Active Super Properties Viewed", properties: userProps });
+                    showToast(`${Object.keys(userProps).length} super properties found`);
+                  }}
+                  className="w-full py-2.5 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-sm"
+                >
+                  Show Active Super Properties
+                </button>
+                {activeSuperProps && (
+                  <div className="bg-input-bg border border-border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-muted">Active Super Properties</p>
+                      <button
+                        onClick={() => setActiveSuperProps(null)}
+                        className="text-xs text-muted hover:text-foreground transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    {Object.keys(activeSuperProps).length > 0 ? (
+                      <pre className="text-xs font-mono text-foreground/80 overflow-x-auto">
+                        {JSON.stringify(activeSuperProps, null, 2)}
+                      </pre>
+                    ) : (
+                      <p className="text-xs text-muted">No user-defined super properties registered.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Event Reference ── */}
+        <div className="pt-2">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-1 h-6 bg-accent rounded-full" />
+            <h2 className="text-lg font-semibold text-foreground">Event Reference</h2>
+          </div>
+          <p className="text-muted text-sm mb-4">
+            Complete guide to every PostHog event type. Click &quot;Fire Event&quot; to send a demo event.
+          </p>
+        </div>
 
         {eventTypes.map((category) => (
           <section
@@ -318,6 +489,8 @@ export default function EventsPage() {
           </section>
         ))}
       </main>
+
+      <ToastStack toasts={toasts} />
     </div>
   );
 }
