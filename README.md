@@ -102,7 +102,6 @@ Auto-loads the surveys from your PostHog project on arrival. Use **Reload Survey
 Each survey card has:
 
 - **Trigger** — render the survey as it would appear in a real in-product popover
-- **Preview** — same render, but without firing a `survey shown` event
 - **Dismiss** — fire a dismissal event
 - For API-type surveys, a full inline form (open text, ratings, single/multi choice, links) with a Submit button
 - An expandable **Targeting conditions** panel showing the URL, selector, events, and linked flag that control when the survey matches

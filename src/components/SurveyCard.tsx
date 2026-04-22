@@ -14,7 +14,6 @@ type ResponseValue = string | string[] | number | null;
 interface Props {
   survey: Survey;
   onTrigger: (survey: Survey) => void;
-  onPreview: (survey: Survey) => void;
   onSubmit: (survey: Survey, responses: ResponseValue[]) => void;
   onDismiss: (survey: Survey) => void;
 }
@@ -31,7 +30,7 @@ function isLink(q: SurveyQuestion): q is LinkSurveyQuestion {
   return q.type === "link";
 }
 
-export default function SurveyCard({ survey, onTrigger, onPreview, onSubmit, onDismiss }: Props) {
+export default function SurveyCard({ survey, onTrigger, onSubmit, onDismiss }: Props) {
   const [showTargeting, setShowTargeting] = useState(false);
   const [responses, setResponses] = useState<ResponseValue[]>(() => survey.questions.map(() => null));
 
@@ -69,17 +68,11 @@ export default function SurveyCard({ survey, onTrigger, onPreview, onSubmit, onD
             <button
               onClick={() => onTrigger(survey)}
               className="py-1.5 px-3 bg-pink-600 hover:bg-pink-500 text-white font-medium rounded-lg transition-colors text-xs"
+              title="Render this survey regardless of targeting rules"
             >
               Trigger
             </button>
           )}
-          <button
-            onClick={() => onPreview(survey)}
-            className="py-1.5 px-3 bg-pink-500/20 hover:bg-pink-500/30 text-pink-400 font-medium rounded-lg transition-colors text-xs"
-            title="Render this survey regardless of targeting rules"
-          >
-            Preview
-          </button>
           <button
             onClick={() => onDismiss(survey)}
             className="py-1.5 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs"
