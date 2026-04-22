@@ -77,12 +77,16 @@ export default function DashboardPage() {
 
   const handleIdentify = () => {
     if (!identifyId.trim()) return;
-    try {
-      const props = JSON.parse(identifyProps);
-      identifyUser(identifyId.trim(), props);
-    } catch {
-      identifyUser(identifyId.trim());
+    let props: Record<string, unknown> | undefined;
+    if (identifyProps.trim()) {
+      try {
+        props = JSON.parse(identifyProps);
+      } catch {
+        showToast("Invalid JSON in properties", "error");
+        return;
+      }
     }
+    identifyUser(identifyId.trim(), props);
     showToast(`Identified as "${identifyId.trim()}"`);
   };
 

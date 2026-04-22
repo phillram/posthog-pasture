@@ -1,14 +1,7 @@
 "use client";
 
-// IMPORTANT: networkPatch must be imported before posthog-js so that
-// navigator.sendBeacon / window.fetch / XMLHttpRequest are already wrapped
-// when the SDK module evaluates (the SDK caches those references at import
-// time and would otherwise bypass our interceptors).
-import { subscribeLastResponse, type LastResponse } from "@/lib/networkPatch";
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import posthog from "posthog-js";
-
-export type { LastResponse };
 
 interface PosthogConfig {
   apiKey: string;
@@ -51,7 +44,6 @@ interface PosthogContextType {
   startSessionRecording: () => void;
   stopSessionRecording: () => void;
   isRecording: boolean;
-  lastResponse: LastResponse | null;
   addLog: (entry: { type: EventLogEntry["type"]; name: string; properties?: Record<string, unknown> }) => void;
 }
 
@@ -82,7 +74,6 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean | string>>({});
   const [flagsReady, setFlagsReady] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [lastResponse, setLastResponse] = useState<LastResponse | null>(null);
   const initRef = useRef(false);
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
@@ -101,14 +92,6 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     addLogRef.current = addLog;
   }, [addLog]);
 
-  // Subscribe to the network-patch module's stream of captured responses.
-  // The patch itself is installed at module import time (see networkPatch.ts).
-  useEffect(() => {
-    return subscribeLastResponse((response) => {
-      setLastResponse(response);
-    });
-  }, []);
-
   // Shared init routine used by both the mount-time rehydration effect and
   // interactive calls to initPosthog. Keeping a single source of truth avoids
   // drift between the two call sites.
@@ -123,6 +106,23 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       // This is a sandbox — flush events as fast as the SDK allows (minimum 250ms)
       // so captures show up in PostHog's UI with minimal delay. Default is 3s.
       request_queue_config: { flush_interval_ms: 250 },
+      // Surface PostHog network failures in the event log + as an error toast
+      // (see PosthogProvider useEffect below). This only fires on real errors
+      // so it won't spam the log with every capture.
+      on_request_error: (err) => {
+        const status = typeof err === "object" && err && "statusCode" in err ? Number(err.statusCode) : 0;
+        const message =
+          typeof err === "object" && err && "text" in err && err.text
+            ? String(err.text)
+            : typeof err === "object" && err && "error" in err
+              ? String(err.error)
+              : "Unknown error";
+        addLogRef.current({
+          type: "error",
+          name: `PostHog request failed${status ? ` (${status})` : ""}`,
+          properties: { status, message },
+        });
+      },
       loaded: (ph) => {
         ph.onFeatureFlags(() => {
           const flags = ph.featureFlags.getFlagVariants();
@@ -406,7 +406,6 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         startSessionRecording,
         stopSessionRecording,
         isRecording,
-        lastResponse,
         addLog,
       }}
     >
