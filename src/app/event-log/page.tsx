@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
+import HedgehogGif from "@/components/HedgehogGif";
 
 const typeColors: Record<string, string> = {
   event: "text-primary",
@@ -47,11 +48,14 @@ export default function EventLogPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-7xl mx-auto p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">📋 Event Log</h1>
-          <p className="text-muted text-sm">
-            All PostHog events, identifications, and actions captured during this session.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Event Log</h1>
+            <p className="text-muted text-sm">
+              All PostHog events, identifications, and actions captured during this session.
+            </p>
+          </div>
+          <HedgehogGif index={3} size="sm" />
         </div>
 
         {eventLog.length === 0 ? (

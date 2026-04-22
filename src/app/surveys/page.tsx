@@ -6,6 +6,7 @@ import type { Survey } from "posthog-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
+import HedgehogGif from "@/components/HedgehogGif";
 import SurveyCard from "@/components/SurveyCard";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
@@ -26,15 +27,41 @@ export default function SurveysPage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  // Auto-load all surveys on mount once PostHog is initialized.
+  useEffect(() => {
+    if (!isInitialized) return;
+    let cancelled = false;
+    setSurveyLoading(true);
+    (async () => {
+      const ph = (await import("posthog-js")).default;
+      ph.getSurveys((s) => {
+        if (cancelled) return;
+        setSurveys(s);
+        setSurveyLoading(false);
+        addLog({
+          type: "event",
+          name: "All Surveys Loaded",
+          properties: { count: s.length, surveys: s.map((sv) => sv.name) },
+        });
+      }, true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isInitialized, addLog]);
+
   if (isLoading || !isAuthenticated) return null;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-5xl mx-auto p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Surveys</h1>
-          <p className="text-muted text-sm">Load, preview, and respond to surveys from your PostHog project.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Surveys</h1>
+            <p className="text-muted text-sm">Load, preview, and respond to surveys from your PostHog project.</p>
+          </div>
+          <HedgehogGif index={1} size="sm" />
         </div>
 
         {!isInitialized && (
@@ -72,7 +99,7 @@ export default function SurveysPage() {
                   }}
                   className="py-2 px-4 bg-pink-500/20 hover:bg-pink-500/30 text-pink-400 font-medium rounded-lg transition-colors text-sm"
                 >
-                  {surveyLoading ? "Loading..." : "Load All Surveys"}
+                  {surveyLoading ? "Loading..." : "Reload Surveys"}
                 </button>
                 <button
                   onClick={async () => {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
+import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
 
@@ -307,26 +308,29 @@ export default function ExperimentsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">🧪 Experiments</h1>
+            <h1 className="text-2xl font-bold text-foreground">Experiments</h1>
             <p className="text-muted text-sm">
               Generate realistic experiment data. PostHog assigns each simulated user their variant via the decide API —
               no manual assignment.
             </p>
           </div>
-          {step !== "configure" && (
-            <button
-              onClick={() => {
-                setStep("configure");
-                setResults([]);
-                setProgress(0);
-                setRunError("");
-                setProgressLabel("");
-              }}
-              className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
-            >
-              ← New Experiment
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {step !== "configure" && (
+              <button
+                onClick={() => {
+                  setStep("configure");
+                  setResults([]);
+                  setProgress(0);
+                  setRunError("");
+                  setProgressLabel("");
+                }}
+                className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
+              >
+                ← New Experiment
+              </button>
+            )}
+            <HedgehogGif index={0} size="sm" />
+          </div>
         </div>
 
         {!isInitialized && (
