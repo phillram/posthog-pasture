@@ -2,8 +2,6 @@
 
 An interactive sandbox for exploring and testing [PostHog](https://posthog.com). Connect your PostHog project, fire events, toggle feature flags, trigger surveys, generate experiment data, and inspect everything in real time.
 
-The nav bar shows a **Last Response** pill with the HTTP status and latency of the most recent request to PostHog — green when things are healthy, red when something fails — so you can see at a glance whether events are getting through.
-
 ## Tech Stack
 
 | Layer     | Technology               |

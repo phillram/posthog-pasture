@@ -273,12 +273,16 @@ export default function EventsPage() {
   const handleCustomEvent = () => {
     if (!customEventName.trim()) return;
     const name = customEventName.trim();
-    try {
-      const props = JSON.parse(customEventProps);
-      captureEvent(name, props);
-    } catch {
-      captureEvent(name);
+    let props: Record<string, unknown> | undefined;
+    if (customEventProps.trim()) {
+      try {
+        props = JSON.parse(customEventProps);
+      } catch {
+        showToast("Invalid JSON in properties", "error");
+        return;
+      }
     }
+    captureEvent(name, props);
     showToast(`Event "${name}" captured`);
   };
 
