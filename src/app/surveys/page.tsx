@@ -73,7 +73,7 @@ export default function SurveysPage() {
   }, [surveys, showAllStatuses]);
 
   const statusCounts = useMemo(() => {
-    const counts: Record<SurveyStatus, number> = { draft: 0, scheduled: 0, running: 0, completed: 0 };
+    const counts: Record<SurveyStatus, number> = { draft: 0, running: 0, completed: 0, archived: 0 };
     for (const s of surveys) counts[surveyStatus(s)]++;
     return counts;
   }, [surveys]);
@@ -110,8 +110,8 @@ export default function SurveysPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-3 text-xs text-muted">
                 <span>
-                  {statusCounts.running} running · {statusCounts.draft} draft · {statusCounts.scheduled} scheduled ·{" "}
-                  {statusCounts.completed} completed
+                  {statusCounts.running} running · {statusCounts.draft} draft · {statusCounts.completed} complete
+                  {statusCounts.archived > 0 ? ` · ${statusCounts.archived} archived` : ""}
                 </span>
               </div>
               <div className="flex items-center gap-3">
