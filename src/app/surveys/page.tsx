@@ -130,7 +130,14 @@ export default function SurveysPage() {
                     survey={survey}
                     onTrigger={async (s) => {
                       const ph = (await import("posthog-js")).default;
-                      ph.renderSurvey(s.id, "body");
+                      // displaySurvey renders the branded PostHog popover modal
+                      // (not the bare renderSurvey output). ignoreConditions
+                      // and ignoreDelay force it to show regardless of targeting.
+                      ph.displaySurvey(s.id, {
+                        displayType: "popover",
+                        ignoreConditions: true,
+                        ignoreDelay: true,
+                      });
                       addLog({
                         type: "event",
                         name: `Survey Triggered: ${s.name}`,
@@ -140,8 +147,12 @@ export default function SurveysPage() {
                     }}
                     onPreview={async (s) => {
                       const ph = (await import("posthog-js")).default;
-                      // renderSurvey bypasses targeting, so it doubles as a preview
-                      ph.renderSurvey(s.id, "body");
+                      ph.displaySurvey(s.id, {
+                        displayType: "popover",
+                        ignoreConditions: true,
+                        ignoreDelay: true,
+                        skipShownEvent: true,
+                      });
                       addLog({
                         type: "event",
                         name: `Survey Previewed: ${s.name}`,
