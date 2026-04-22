@@ -1,7 +1,14 @@
 "use client";
 
+// IMPORTANT: networkPatch must be imported before posthog-js so that
+// navigator.sendBeacon / window.fetch / XMLHttpRequest are already wrapped
+// when the SDK module evaluates (the SDK caches those references at import
+// time and would otherwise bypass our interceptors).
+import { subscribeLastResponse, type LastResponse } from "@/lib/networkPatch";
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import posthog from "posthog-js";
+
+export type { LastResponse };
 
 interface PosthogConfig {
   apiKey: string;
@@ -56,14 +63,6 @@ interface EventLogEntry {
   properties?: Record<string, unknown>;
 }
 
-export interface LastResponse {
-  status: number;
-  ok: boolean;
-  latencyMs: number;
-  endpoint: string;
-  timestamp: Date;
-}
-
 const defaultConfig: PosthogConfig = {
   apiKey: "",
   apiHost: "https://us.i.posthog.com",
@@ -85,7 +84,6 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [isRecording, setIsRecording] = useState(false);
   const [lastResponse, setLastResponse] = useState<LastResponse | null>(null);
   const initRef = useRef(false);
-  const networkPatchedRef = useRef(false);
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
 
@@ -103,95 +101,18 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     addLogRef.current = addLog;
   }, [addLog]);
 
-  // Wrap fetch, XHR, and navigator.sendBeacon so we can show the most recent
-  // response in the navbar regardless of which transport the SDK uses.
-  // posthog-js uses sendBeacon for most captures, XHR for some polling, and
-  // the experiments page uses fetch directly.
-  const patchNetwork = useCallback(() => {
-    if (networkPatchedRef.current || typeof window === "undefined") return;
-    const isPosthogHost = (url: string) => /(?:^|\.)(i\.posthog\.com|posthog\.com)/.test(url);
-    const pathOf = (url: string) => {
-      try {
-        return new URL(url, window.location.origin).pathname;
-      } catch {
-        return url;
-      }
-    };
-    const record = (status: number, ok: boolean, latencyMs: number, endpoint: string) => {
-      setLastResponse({ status, ok, latencyMs, endpoint, timestamp: new Date() });
-    };
-
-    // ── fetch ──
-    const originalFetch = window.fetch.bind(window);
-    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-      if (!isPosthogHost(url)) return originalFetch(input, init);
-      const start = performance.now();
-      try {
-        const response = await originalFetch(input, init);
-        record(response.status, response.ok, Math.round(performance.now() - start), pathOf(url));
-        return response;
-      } catch (err) {
-        record(0, false, Math.round(performance.now() - start), pathOf(url));
-        throw err;
-      }
-    };
-
-    // ── XMLHttpRequest ──
-    const XHRProto = window.XMLHttpRequest.prototype;
-    const originalOpen = XHRProto.open;
-    const originalSend = XHRProto.send;
-    type TrackedXHR = XMLHttpRequest & {
-      __pasture_url?: string;
-      __pasture_start?: number;
-    };
-    XHRProto.open = function (this: TrackedXHR, ...args: unknown[]) {
-      const url = args[1];
-      this.__pasture_url = typeof url === "string" ? url : url instanceof URL ? url.toString() : "";
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return originalOpen.apply(this, args as any);
-    };
-    XHRProto.send = function (this: TrackedXHR, ...args: unknown[]) {
-      const url = this.__pasture_url;
-      if (url && isPosthogHost(url)) {
-        this.__pasture_start = performance.now();
-        this.addEventListener("loadend", () => {
-          const latencyMs = Math.round(performance.now() - (this.__pasture_start ?? performance.now()));
-          const status = this.status || 0;
-          const ok = status >= 200 && status < 300;
-          record(status, ok, latencyMs, pathOf(url));
-        });
-      }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return originalSend.apply(this, args as any);
-    };
-
-    // ── navigator.sendBeacon ──
-    // sendBeacon is the SDK's preferred transport for captures. It's
-    // fire-and-forget (no response), so we can only record the queued status.
-    // Shows as 202 (standard for beacon success) or 0 (browser refused).
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const originalSendBeacon = navigator.sendBeacon.bind(navigator);
-      navigator.sendBeacon = (url: string | URL, data?: BodyInit | null): boolean => {
-        const urlString = typeof url === "string" ? url : url.toString();
-        const start = performance.now();
-        const queued = originalSendBeacon(urlString, data);
-        if (isPosthogHost(urlString)) {
-          const latencyMs = Math.round(performance.now() - start);
-          record(queued ? 202 : 0, queued, latencyMs, pathOf(urlString));
-        }
-        return queued;
-      };
-    }
-
-    networkPatchedRef.current = true;
+  // Subscribe to the network-patch module's stream of captured responses.
+  // The patch itself is installed at module import time (see networkPatch.ts).
+  useEffect(() => {
+    return subscribeLastResponse((response) => {
+      setLastResponse(response);
+    });
   }, []);
 
   // Shared init routine used by both the mount-time rehydration effect and
   // interactive calls to initPosthog. Keeping a single source of truth avoids
   // drift between the two call sites.
   const runPosthogInit = useCallback((cfg: PosthogConfig) => {
-    patchNetwork();
     posthog.init(cfg.apiKey, {
       api_host: cfg.apiHost || "https://us.i.posthog.com",
       autocapture: cfg.autocapture,
@@ -230,7 +151,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       (window as unknown as Record<string, unknown>).posthog = posthog;
     }
-  }, [patchNetwork]);
+  }, []);
 
   // Load config from localStorage on mount. This is a client-only read, so it
   // must happen in an effect to stay SSR-safe. The react-hooks/set-state-in-effect
