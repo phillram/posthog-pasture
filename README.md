@@ -2,6 +2,8 @@
 
 An interactive sandbox for exploring and testing the [PostHog](https://posthog.com) JavaScript SDK. Connect your PostHog project, fire events, toggle feature flags, trigger surveys, generate experiment data, and inspect everything in real time.
 
+> **Debug mode is always on.** The SDK is initialized with `debug: true`, and the `posthog` instance is exposed on `window` so you can call `posthog.capture(...)` etc. directly from the browser console.
+
 ## Tech Stack
 
 | Layer     | Technology                       |

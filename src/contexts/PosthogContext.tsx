@@ -101,6 +101,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       autocapture: cfg.autocapture,
       capture_pageview: cfg.capturePageview,
       capture_pageleave: cfg.capturePageleave,
+      debug: true,
       disable_session_recording: cfg.disableSessionRecording,
       loaded: (ph) => {
         ph.onFeatureFlags(() => {
