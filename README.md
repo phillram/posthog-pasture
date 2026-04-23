@@ -2,6 +2,8 @@
 
 An interactive sandbox for exploring and testing [PostHog](https://posthog.com). Connect your PostHog project, fire events, toggle feature flags, trigger surveys, generate experiment data, and inspect everything in real time.
 
+Every event fired from Pasture is automatically tagged with an **`evaluation_context`** property set to `pasture:<page>` (e.g. `pasture:dashboard`, `pasture:flags`). You can filter on this in PostHog to see exactly which page a given event came from.
+
 ## Tech Stack
 
 | Layer     | Technology               |
