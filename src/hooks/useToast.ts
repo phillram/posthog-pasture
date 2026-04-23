@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type ToastType = "success" | "error" | "info";
+type ToastType = "success" | "error" | "info";
 
 export interface Toast {
   id: string;
