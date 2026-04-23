@@ -1,6 +1,6 @@
 // 25 hedgehog-themed merchandise items. Every pasture_purchase event generated
 // by Pasture picks one at random and prefixes it with "hedgehog_".
-export const MERCHANDISE_ITEMS = [
+const MERCHANDISE_ITEMS = [
   "plushie",
   "mug",
   "sticker_pack",
@@ -28,7 +28,7 @@ export const MERCHANDISE_ITEMS = [
   "blanket",
 ] as const;
 
-export interface PurchaseProps {
+interface PurchaseProps {
   item: string;
   price: number;
   price_display: string;
