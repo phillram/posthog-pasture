@@ -75,7 +75,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setApplyFeatureFlags((v) => !v)}
-              className={`relative mt-0.5 shrink-0 w-10 h-5 rounded-full transition-colors ${applyFeatureFlags ? "bg-warning" : "bg-muted/30"}`}
+              className={`relative mt-0.5 shrink-0 w-10 h-5 rounded-full transition-colors ${applyFeatureFlags ? "bg-primary" : "bg-muted/30"}`}
             >
               <span
                 className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${applyFeatureFlags ? "translate-x-5" : "translate-x-0"}`}

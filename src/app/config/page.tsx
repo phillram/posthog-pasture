@@ -196,7 +196,7 @@ export default function ConfigPage() {
             </div>
             <button
               onClick={handleFullReset}
-              className="py-2 px-4 bg-error hover:bg-red-600 text-white font-medium rounded-lg transition-colors text-sm"
+              className="py-2 px-4 bg-error hover:bg-error/80 text-white font-medium rounded-lg transition-colors text-sm"
             >
               Reset Everything
             </button>

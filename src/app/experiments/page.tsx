@@ -361,7 +361,7 @@ export default function ExperimentsPage() {
             {/* Step 1: Flag selection */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-3">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
                   1
                 </span>
                 <h2 className="text-base font-semibold text-foreground">Select a feature flag</h2>
@@ -371,7 +371,7 @@ export default function ExperimentsPage() {
                     className={`ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
                       showAllFlags
                         ? "bg-warning/20 border-warning/40 text-warning hover:bg-warning/30"
-                        : "bg-input-bg border-border text-muted hover:border-primary/50 hover:text-foreground"
+                        : "bg-input-bg border-border text-muted hover:border-warning/50 hover:text-foreground"
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${showAllFlags ? "bg-warning" : "bg-muted"}`} />
@@ -408,8 +408,8 @@ export default function ExperimentsPage() {
                           onClick={() => setSelectedFlag(key)}
                           className={`px-2 py-1.5 rounded-lg border text-xs font-mono text-left transition-colors ${
                             selectedFlag === key
-                              ? "bg-primary/20 border-primary text-primary"
-                              : "bg-input-bg border-border text-foreground hover:border-primary/50"
+                              ? "bg-warning/20 border-warning text-warning"
+                              : "bg-input-bg border-border text-foreground hover:border-warning/50"
                           }`}
                         >
                           <span className="flex items-center gap-1 flex-wrap leading-tight">
@@ -433,7 +433,7 @@ export default function ExperimentsPage() {
             {/* Step 2: User count */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
                   2
                 </span>
                 <h2 className="text-base font-semibold text-foreground">Number of simulated users</h2>
@@ -445,7 +445,7 @@ export default function ExperimentsPage() {
                   max={500}
                   value={userCount}
                   onChange={(e) => setUserCount(Math.max(1, Math.min(500, parseInt(e.target.value) || 1)))}
-                  className="w-24 px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
+                  className="w-24 px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
                 />
                 <div className="flex gap-2 flex-wrap">
                   {[10, 25, 50, 100, 200].map((n) => (
@@ -454,8 +454,8 @@ export default function ExperimentsPage() {
                       onClick={() => setUserCount(n)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         userCount === n
-                          ? "bg-primary text-white"
-                          : "bg-input-bg hover:bg-primary/10 text-muted border border-border"
+                          ? "bg-warning text-black"
+                          : "bg-input-bg hover:bg-warning/10 text-muted border border-border"
                       }`}
                     >
                       {n}
@@ -471,7 +471,7 @@ export default function ExperimentsPage() {
             {/* Step 3: Conversion rate */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
                   3
                 </span>
                 <h2 className="text-base font-semibold text-foreground">Conversion rate</h2>
@@ -488,7 +488,7 @@ export default function ExperimentsPage() {
                     max={100}
                     value={conversionPct}
                     onChange={(e) => setConversionPct(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                    className="w-24 px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
+                    className="w-24 px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
                   />
                   <span className="ml-2 text-muted text-sm">%</span>
                 </div>
@@ -499,8 +499,8 @@ export default function ExperimentsPage() {
                       onClick={() => setConversionPct(n)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         conversionPct === n
-                          ? "bg-primary text-white"
-                          : "bg-input-bg hover:bg-primary/10 text-muted border border-border"
+                          ? "bg-warning text-black"
+                          : "bg-input-bg hover:bg-warning/10 text-muted border border-border"
                       }`}
                     >
                       {n}%
@@ -513,7 +513,7 @@ export default function ExperimentsPage() {
             {/* Step 4: Conversion action */}
             <section className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
                   4
                 </span>
                 <h2 className="text-base font-semibold text-foreground">Conversion action</h2>
@@ -526,18 +526,18 @@ export default function ExperimentsPage() {
                     onClick={() => setSelectedAction(action.event)}
                     className={`px-3 py-2.5 rounded-lg border text-left transition-colors ${
                       selectedAction === action.event
-                        ? "bg-success/20 border-success text-success"
-                        : "bg-input-bg border-border text-foreground hover:border-success/50"
+                        ? "bg-warning/20 border-warning text-warning"
+                        : "bg-input-bg border-border text-foreground hover:border-warning/50"
                     }`}
                   >
                     <span className="block text-sm font-semibold">{action.label}</span>
                     <span
-                      className={`block text-xs font-mono mt-0.5 ${selectedAction === action.event ? "text-success/80" : "text-muted"}`}
+                      className={`block text-xs font-mono mt-0.5 ${selectedAction === action.event ? "text-warning/80" : "text-muted"}`}
                     >
                       {action.event}
                     </span>
                     <span
-                      className={`block text-xs mt-0.5 ${selectedAction === action.event ? "text-success/70" : "text-muted/70"}`}
+                      className={`block text-xs mt-0.5 ${selectedAction === action.event ? "text-warning/70" : "text-muted/70"}`}
                     >
                       {JSON.stringify(action.props)}
                     </span>
@@ -547,7 +547,7 @@ export default function ExperimentsPage() {
             </section>
 
             {/* Summary + Start */}
-            <div className="bg-card border border-primary/30 rounded-xl p-6">
+            <div className="bg-card border border-warning/30 rounded-xl p-6">
               <h3 className="text-sm font-semibold text-foreground mb-3">Summary</h3>
               <div className="grid grid-cols-2 gap-3 text-sm mb-5">
                 <div>
@@ -572,7 +572,7 @@ export default function ExperimentsPage() {
               <button
                 onClick={runExperiment}
                 disabled={!selectedFlag || !isInitialized}
-                className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-warning hover:bg-warning/80 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🚀 Start Experiment
               </button>
@@ -591,7 +591,7 @@ export default function ExperimentsPage() {
               <h2 className="text-lg font-semibold text-foreground mb-1">Running experiment…</h2>
               <p className="text-muted text-sm">
                 {progressLabel || `Processing flag `}
-                <code className="font-mono text-primary">{selectedFlag}</code>
+                <code className="font-mono text-warning">{selectedFlag}</code>
               </p>
             </div>
             <div className="w-full max-w-sm">
@@ -601,7 +601,7 @@ export default function ExperimentsPage() {
               </div>
               <div className="w-full h-3 bg-input-bg rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full transition-all duration-200"
+                  className="h-full bg-warning rounded-full transition-all duration-200"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -630,9 +630,9 @@ export default function ExperimentsPage() {
             )}
 
             {/* Flag used */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-card border border-primary/20 rounded-xl flex-wrap">
+            <div className="flex items-center gap-3 px-4 py-3 bg-card border border-warning/20 rounded-xl flex-wrap">
               <span className="text-muted text-sm">Experiment flag:</span>
-              <code className="font-mono text-primary font-semibold">{selectedFlag}</code>
+              <code className="font-mono text-warning font-semibold">{selectedFlag}</code>
               <span className="text-muted text-xs">
                 · {userCount} users · {conversionPct}% target conversion · variants assigned by PostHog
               </span>
@@ -648,8 +648,8 @@ export default function ExperimentsPage() {
                 <p className="text-2xl font-bold text-success">{results.filter((u) => u.actionCompleted).length}</p>
                 <p className="text-xs text-muted mt-1">Converted</p>
               </div>
-              <div className="bg-card border border-primary/30 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-primary">
+              <div className="bg-card border border-warning/30 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-warning">
                   {results.length > 0
                     ? `${Math.round((results.filter((u) => u.actionCompleted).length / results.length) * 100)}%`
                     : "—"}
@@ -674,7 +674,7 @@ export default function ExperimentsPage() {
                           <p className="text-xs text-muted mt-1">
                             {group.length} users · {converted} converted
                           </p>
-                          <p className="text-xs font-semibold text-primary mt-0.5">
+                          <p className="text-xs font-semibold text-warning mt-0.5">
                             {group.length > 0 ? `${Math.round((converted / group.length) * 100)}%` : "—"}
                           </p>
                         </div>
@@ -693,7 +693,7 @@ export default function ExperimentsPage() {
                   href={experimentUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-2 px-4 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-xs"
+                  className="py-2 px-4 bg-warning/20 hover:bg-warning/30 text-warning font-medium rounded-lg transition-colors text-xs"
                 >
                   View in PostHog →
                 </a>

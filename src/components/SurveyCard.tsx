@@ -73,7 +73,7 @@ export default function SurveyCard({ survey, onTrigger, onSubmit }: Props) {
           {survey.type === "popover" && (
             <button
               onClick={() => onTrigger(survey)}
-              className="py-1.5 px-3 bg-pink-600 hover:bg-pink-500 text-white font-medium rounded-lg transition-colors text-xs"
+              className="py-1.5 px-3 bg-pink hover:bg-pink-hover text-white font-medium rounded-lg transition-colors text-xs"
               title="Render this survey regardless of targeting rules"
             >
               Trigger
@@ -141,7 +141,7 @@ export default function SurveyCard({ survey, onTrigger, onSubmit }: Props) {
                 <textarea
                   value={(responses[qi] as string) ?? ""}
                   onChange={(e) => setResponseAt(qi, e.target.value)}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pink"
                   rows={2}
                 />
               )}
@@ -151,7 +151,7 @@ export default function SurveyCard({ survey, onTrigger, onSubmit }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setResponseAt(qi, q.link ?? "")}
-                  className="inline-block py-1.5 px-3 bg-pink-500/20 hover:bg-pink-500/30 text-pink-400 text-xs rounded-lg transition-colors"
+                  className="inline-block py-1.5 px-3 bg-pink/20 hover:bg-pink/30 text-pink text-xs rounded-lg transition-colors"
                 >
                   {q.buttonText || "Open link"}
                 </a>
@@ -167,8 +167,8 @@ export default function SurveyCard({ survey, onTrigger, onSubmit }: Props) {
                         onClick={() => setResponseAt(qi, n)}
                         className={`w-8 h-8 rounded border text-xs font-medium transition-colors ${
                           selected
-                            ? "bg-pink-600 border-pink-600 text-white"
-                            : "bg-background border-border text-foreground hover:border-pink-500"
+                            ? "bg-pink border-pink text-white"
+                            : "bg-background border-border text-foreground hover:border-pink"
                         }`}
                       >
                         {q.display === "emoji"
@@ -219,7 +219,7 @@ export default function SurveyCard({ survey, onTrigger, onSubmit }: Props) {
           ))}
           <button
             onClick={handleSubmit}
-            className="py-2 px-4 bg-pink-600 hover:bg-pink-500 text-white font-medium rounded-lg transition-colors text-sm"
+            className="py-2 px-4 bg-pink hover:bg-pink-hover text-white font-medium rounded-lg transition-colors text-sm"
           >
             Submit response
           </button>

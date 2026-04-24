@@ -20,25 +20,25 @@ export default function Navbar() {
         </Link>
         {isAuthenticated && (
           <div className="flex items-center gap-4 text-sm">
-            <Link href="/dashboard" className="text-muted hover:text-foreground transition-colors">
+            <Link href="/dashboard" className="text-muted hover:text-primary transition-colors">
               📊 Dashboard
             </Link>
-            <Link href="/events" className="text-muted hover:text-foreground transition-colors">
+            <Link href="/events" className="text-muted hover:text-primary transition-colors">
               📖 Events
             </Link>
-            <Link href="/errors" className="text-muted hover:text-foreground transition-colors">
+            <Link href="/errors" className="text-muted hover:text-error transition-colors">
               🐞 Errors
             </Link>
-            <Link href="/flags" className="text-muted hover:text-foreground transition-colors">
+            <Link href="/flags" className="text-muted hover:text-success transition-colors">
               🚩 Flags
             </Link>
-            <Link href="/experiments" className="text-muted hover:text-foreground transition-colors">
+            <Link href="/experiments" className="text-muted hover:text-warning transition-colors">
               🧪 Experiments
             </Link>
-            <Link href="/surveys" className="text-muted hover:text-foreground transition-colors">
+            <Link href="/surveys" className="text-muted hover:text-pink transition-colors">
               📝 Surveys
             </Link>
-            <Link href="/event-log" className="text-muted hover:text-foreground transition-colors">
+            <Link href="/event-log" className="text-muted hover:text-primary transition-colors">
               📋 Event Log
             </Link>
             <Link href="/config" className="text-muted hover:text-foreground transition-colors">
@@ -57,7 +57,7 @@ export default function Navbar() {
         {isAuthenticated && (
           <>
             <span className="text-sm text-muted">{user?.isGuest ? "Guest" : user?.name}</span>
-            <button onClick={logout} className="text-sm text-error hover:text-red-400 transition-colors">
+            <button onClick={logout} className="text-sm text-error hover:text-error/70 transition-colors">
               Logout
             </button>
           </>
