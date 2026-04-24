@@ -192,19 +192,19 @@ export default function DashboardPage() {
           name: "Form Submitted",
           event: "pasture_form_submitted",
           props: { form_name: "contact", fields_count: 5 },
-          color: "bg-blue-600 hover:bg-blue-500",
+          color: "bg-primary/70 hover:bg-primary/90",
         },
         {
           name: "Sign Up Started",
           event: "pasture_signup_started",
           props: { source: "landing_page", variant: "A" },
-          color: "bg-teal-600 hover:bg-teal-500",
+          color: "bg-accent hover:bg-accent-hover",
         },
         {
           name: "Search Performed",
           event: "pasture_search",
           props: { query: "hedgehog care", results_count: 42 },
-          color: "bg-pink-600 hover:bg-pink-500",
+          color: "bg-pink hover:bg-pink-hover",
         },
         {
           name: "Capture Pageview",
@@ -378,20 +378,20 @@ export default function DashboardPage() {
                     value={groupType}
                     onChange={(e) => setGroupType(e.target.value)}
                     placeholder="Group type"
-                    className="px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
+                    className="px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
                   />
                   <input
                     type="text"
                     value={groupKey}
                     onChange={(e) => setGroupKey(e.target.value)}
                     placeholder="Group key"
-                    className="px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
+                    className="px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
                   />
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleGroupIdentify}
-                    className="flex-1 py-2.5 bg-warning/80 hover:bg-warning text-black font-medium rounded-lg transition-colors text-sm"
+                    className="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
                   >
                     Group Identify
                   </button>
@@ -411,7 +411,7 @@ export default function DashboardPage() {
                           : "No groups set"
                       );
                     }}
-                    className="py-2.5 px-4 bg-warning/20 hover:bg-warning/30 text-warning font-medium rounded-lg transition-colors text-sm"
+                    className="py-2.5 px-4 bg-accent/20 hover:bg-accent/30 text-accent font-medium rounded-lg transition-colors text-sm"
                     title="Show current group associations"
                   >
                     Check
@@ -467,7 +467,7 @@ export default function DashboardPage() {
         {/* ── Sandboxes ── */}
         <section>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 bg-blue-500 rounded-full" />
+            <div className="w-1 h-6 bg-accent rounded-full" />
             <h2 className="text-lg font-semibold text-foreground">Sandboxes</h2>
           </div>
 
