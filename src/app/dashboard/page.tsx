@@ -17,10 +17,6 @@ export default function DashboardPage() {
     isInitialized,
     captureEvent,
     captureException,
-    identifyUser,
-    resetPerson,
-    setPersonProperties,
-    groupIdentify,
     capturePageview,
     startSessionRecording,
     stopSessionRecording,
@@ -36,19 +32,6 @@ export default function DashboardPage() {
   // PostHog Console
   const [phCommand, setPhCommand] = useState("posthog.capture('test_event', { source: 'console' })");
   const [phHistory, setPhHistory] = useState<{ command: string; result: string; isError: boolean }[]>([]);
-
-  // Identify form
-  const [identifyId, setIdentifyId] = useState("");
-  const [identifyProps, setIdentifyProps] = useState('{"plan": "premium"}');
-
-  // Group form
-  const [groupType, setGroupType] = useState("company");
-  const [groupKey, setGroupKey] = useState("");
-
-  // Person properties form
-  const [personProps, setPersonProps] = useState('{"favorite_color": "orange"}');
-
-  const [activeGroups, setActiveGroups] = useState<Record<string, unknown> | null>(null);
 
   // Toast notifications
   const { toasts, showToast } = useToast();
@@ -74,37 +57,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const handleIdentify = () => {
-    if (!identifyId.trim()) return;
-    let props: Record<string, unknown> | undefined;
-    if (identifyProps.trim()) {
-      try {
-        props = JSON.parse(identifyProps);
-      } catch {
-        showToast("Invalid JSON in properties", "error");
-        return;
-      }
-    }
-    identifyUser(identifyId.trim(), props);
-    showToast(`Identified as "${identifyId.trim()}"`);
-  };
-
-  const handleGroupIdentify = () => {
-    if (!groupType.trim() || !groupKey.trim()) return;
-    groupIdentify(groupType.trim(), groupKey.trim());
-    showToast(`Group "${groupType.trim()}/${groupKey.trim()}" set`);
-  };
-
-  const handlePersonProps = () => {
-    try {
-      const props = JSON.parse(personProps);
-      setPersonProperties(props);
-      showToast("Person properties updated");
-    } catch {
-      showToast("Invalid JSON", "error");
-    }
-  };
 
   const handleRunJs = () => {
     if (!jsCode.trim()) return;
@@ -318,161 +270,15 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* ── People & Groups ── */}
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 bg-accent rounded-full" />
-            <h2 className="text-lg font-semibold text-foreground">People & Groups</h2>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Identify User */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h3 className="text-base font-semibold text-foreground mb-3">Identify User</h3>
-              <p className="text-muted text-xs mb-3">
-                Link the current anonymous user to a distinct ID with properties.
-              </p>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  value={identifyId}
-                  onChange={(e) => setIdentifyId(e.target.value)}
-                  placeholder="user_distinct_id"
-                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
-                />
-                <textarea
-                  value={identifyProps}
-                  onChange={(e) => setIdentifyProps(e.target.value)}
-                  rows={2}
-                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleIdentify}
-                    className="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
-                  >
-                    Identify
-                  </button>
-                  <button
-                    onClick={() => {
-                      resetPerson();
-                      showToast("Person reset", "info");
-                    }}
-                    className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Group Identify */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h3 className="text-base font-semibold text-foreground mb-3">Group Identify</h3>
-              <p className="text-muted text-xs mb-3">
-                Associate the current user with a group (company, project, etc).
-              </p>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    value={groupType}
-                    onChange={(e) => setGroupType(e.target.value)}
-                    placeholder="Group type"
-                    className="px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
-                  />
-                  <input
-                    type="text"
-                    value={groupKey}
-                    onChange={(e) => setGroupKey(e.target.value)}
-                    placeholder="Group key"
-                    className="px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleGroupIdentify}
-                    className="flex-1 py-2.5 px-4 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
-                  >
-                    Group Identify
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const ph = (await import("posthog-js")).default;
-                      const groups = ph.getGroups();
-                      setActiveGroups(groups as Record<string, unknown>);
-                      addLog({
-                        type: "group",
-                        name: "Current Groups Viewed",
-                        properties: groups as Record<string, unknown>,
-                      });
-                      showToast(
-                        Object.keys(groups).length > 0
-                          ? `${Object.keys(groups).length} group(s) found`
-                          : "No groups set"
-                      );
-                    }}
-                    className="py-2.5 px-4 bg-accent/20 hover:bg-accent/30 text-accent font-medium rounded-lg transition-colors text-sm"
-                    title="Show current group associations"
-                  >
-                    Check
-                  </button>
-                </div>
-                {activeGroups && (
-                  <div className="bg-input-bg border border-border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-muted">Current Groups</p>
-                      <button
-                        onClick={() => setActiveGroups(null)}
-                        className="text-xs text-muted hover:text-foreground transition-colors"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                    {Object.keys(activeGroups).length > 0 ? (
-                      <pre className="text-xs font-mono text-foreground/80 overflow-x-auto">
-                        {JSON.stringify(activeGroups, null, 2)}
-                      </pre>
-                    ) : (
-                      <p className="text-xs text-muted">No groups currently set.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Person Properties */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h3 className="text-base font-semibold text-foreground mb-3">Person Properties</h3>
-              <p className="text-muted text-xs mb-3">
-                Set properties on the current person without needing to re-identify.
-              </p>
-              <div className="space-y-3">
-                <textarea
-                  value={personProps}
-                  onChange={(e) => setPersonProps(e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
-                />
-                <button
-                  onClick={handlePersonProps}
-                  className="w-full py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
-                >
-                  Set Person Properties
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* ── Sandboxes ── */}
         <section>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 bg-accent rounded-full" />
+            <div className="w-1 h-6 bg-cyan rounded-full" />
             <h2 className="text-lg font-semibold text-foreground">Sandboxes</h2>
           </div>
 
           {/* JS Sandbox */}
-          <div className="bg-card border border-accent/30 rounded-xl p-6 mb-6">
+          <div className="bg-card border border-cyan/30 rounded-xl p-6 mb-6">
             <h3 className="text-base font-semibold text-foreground mb-3">JavaScript Sandbox</h3>
             <p className="text-muted text-xs mb-3">
               Run JavaScript expressions. Results are captured as events. Errors are captured as exceptions.
@@ -483,12 +289,12 @@ export default function DashboardPage() {
                 onChange={(e) => setJsCode(e.target.value)}
                 rows={3}
                 placeholder="document.title"
-                className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
+                className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-cyan text-sm font-mono"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleRunJs}
-                  className="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
+                  className="flex-1 py-2.5 bg-cyan hover:bg-cyan-hover text-white font-medium rounded-lg transition-colors text-sm"
                 >
                   Run & Capture
                 </button>
@@ -565,7 +371,7 @@ export default function DashboardPage() {
                         setJsResult("");
                         showToast(`"${s.label}" loaded`, "info");
                       }}
-                      className="px-2 py-1 bg-accent/10 hover:bg-accent/20 text-accent text-xs rounded transition-colors"
+                      className="px-2 py-1 bg-cyan/10 hover:bg-cyan/20 text-cyan text-xs rounded transition-colors"
                     >
                       {s.label}
                     </button>
@@ -576,13 +382,13 @@ export default function DashboardPage() {
           </div>
 
           {/* PostHog Console */}
-          <div className="bg-card border border-primary/30 rounded-xl p-6 space-y-4">
+          <div className="bg-card border border-cyan/30 rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-semibold text-foreground">PostHog Console</h3>
                 <p className="text-muted text-xs mt-1">
                   Run posthog-js commands directly, just like in the browser console. Use{" "}
-                  <code className="bg-input-bg px-1.5 py-0.5 rounded text-primary font-mono text-xs">posthog</code> as
+                  <code className="bg-input-bg px-1.5 py-0.5 rounded text-cyan font-mono text-xs">posthog</code> as
                   the reference.
                 </p>
               </div>
@@ -590,7 +396,7 @@ export default function DashboardPage() {
                 href="https://posthog.com/docs/libraries/js"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 py-1.5 px-4 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-xs"
+                className="shrink-0 py-1.5 px-4 bg-cyan/20 hover:bg-cyan/30 text-cyan font-medium rounded-lg transition-colors text-xs"
               >
                 JS Docs &rarr;
               </a>
@@ -609,7 +415,7 @@ export default function DashboardPage() {
                   }}
                   rows={3}
                   placeholder="posthog.capture('my_event', { key: 'value' })"
-                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono pr-28"
+                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-cyan text-sm font-mono pr-28"
                 />
                 <kbd className="absolute bottom-2.5 right-2.5 pointer-events-none inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-background border border-border rounded text-xs text-muted font-sans select-none">
                   <span>⌘</span>
@@ -619,7 +425,7 @@ export default function DashboardPage() {
               <div className="flex gap-2 items-center">
                 <button
                   onClick={handlePhCommand}
-                  className="py-2.5 px-4 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-cyan hover:bg-cyan-hover text-white font-medium rounded-lg transition-colors text-sm"
                 >
                   Execute
                 </button>
@@ -665,7 +471,7 @@ export default function DashboardPage() {
                       setPhCommand(cmd.code);
                       showToast(`"${cmd.label}" loaded`, "info");
                     }}
-                    className="px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs rounded transition-colors font-mono"
+                    className="px-2 py-1 bg-cyan/10 hover:bg-cyan/20 text-cyan text-xs rounded transition-colors font-mono"
                   >
                     {cmd.label}
                   </button>
@@ -682,45 +488,45 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="bg-input-bg rounded-lg p-3 space-y-1.5">
                     <p className="font-semibold text-foreground">Event Capture</p>
-                    <code className="block text-primary/80">posthog.capture(event, properties?)</code>
-                    <code className="block text-primary/80">posthog.capture(&apos;$pageview&apos;)</code>
-                    <code className="block text-primary/80">posthog.capture(&apos;$pageleave&apos;)</code>
-                    <code className="block text-primary/80">
+                    <code className="block text-cyan/80">posthog.capture(event, properties?)</code>
+                    <code className="block text-cyan/80">posthog.capture(&apos;$pageview&apos;)</code>
+                    <code className="block text-cyan/80">posthog.capture(&apos;$pageleave&apos;)</code>
+                    <code className="block text-cyan/80">
                       posthog.capture(&apos;$screen&apos;, &#123; $screen_name &#125;)
                     </code>
                   </div>
                   <div className="bg-input-bg rounded-lg p-3 space-y-1.5">
                     <p className="font-semibold text-foreground">Identity</p>
-                    <code className="block text-primary/80">posthog.identify(distinctId, props?)</code>
-                    <code className="block text-primary/80">posthog.alias(alias, distinctId?)</code>
-                    <code className="block text-primary/80">posthog.reset()</code>
-                    <code className="block text-primary/80">posthog.get_distinct_id()</code>
+                    <code className="block text-cyan/80">posthog.identify(distinctId, props?)</code>
+                    <code className="block text-cyan/80">posthog.alias(alias, distinctId?)</code>
+                    <code className="block text-cyan/80">posthog.reset()</code>
+                    <code className="block text-cyan/80">posthog.get_distinct_id()</code>
                   </div>
                   <div className="bg-input-bg rounded-lg p-3 space-y-1.5">
                     <p className="font-semibold text-foreground">Person &amp; Group</p>
-                    <code className="block text-primary/80">posthog.setPersonProperties(props)</code>
-                    <code className="block text-primary/80">posthog.setPersonPropertiesForFlags(props)</code>
-                    <code className="block text-primary/80">posthog.group(type, key, props?)</code>
+                    <code className="block text-cyan/80">posthog.setPersonProperties(props)</code>
+                    <code className="block text-cyan/80">posthog.setPersonPropertiesForFlags(props)</code>
+                    <code className="block text-cyan/80">posthog.group(type, key, props?)</code>
                   </div>
                   <div className="bg-input-bg rounded-lg p-3 space-y-1.5">
                     <p className="font-semibold text-foreground">Feature Flags</p>
-                    <code className="block text-primary/80">posthog.isFeatureEnabled(key)</code>
-                    <code className="block text-primary/80">posthog.getFeatureFlag(key)</code>
-                    <code className="block text-primary/80">posthog.reloadFeatureFlags()</code>
+                    <code className="block text-cyan/80">posthog.isFeatureEnabled(key)</code>
+                    <code className="block text-cyan/80">posthog.getFeatureFlag(key)</code>
+                    <code className="block text-cyan/80">posthog.reloadFeatureFlags()</code>
                   </div>
                   <div className="bg-input-bg rounded-lg p-3 space-y-1.5">
                     <p className="font-semibold text-foreground">Super Properties</p>
-                    <code className="block text-primary/80">posthog.register(props)</code>
-                    <code className="block text-primary/80">posthog.register_once(props)</code>
-                    <code className="block text-primary/80">posthog.unregister(key)</code>
+                    <code className="block text-cyan/80">posthog.register(props)</code>
+                    <code className="block text-cyan/80">posthog.register_once(props)</code>
+                    <code className="block text-cyan/80">posthog.unregister(key)</code>
                   </div>
                   <div className="bg-input-bg rounded-lg p-3 space-y-1.5">
                     <p className="font-semibold text-foreground">Privacy &amp; Recording</p>
-                    <code className="block text-primary/80">posthog.opt_in_capturing()</code>
-                    <code className="block text-primary/80">posthog.opt_out_capturing()</code>
-                    <code className="block text-primary/80">posthog.has_opted_out_capturing()</code>
-                    <code className="block text-primary/80">posthog.startSessionRecording()</code>
-                    <code className="block text-primary/80">posthog.stopSessionRecording()</code>
+                    <code className="block text-cyan/80">posthog.opt_in_capturing()</code>
+                    <code className="block text-cyan/80">posthog.opt_out_capturing()</code>
+                    <code className="block text-cyan/80">posthog.has_opted_out_capturing()</code>
+                    <code className="block text-cyan/80">posthog.startSessionRecording()</code>
+                    <code className="block text-cyan/80">posthog.stopSessionRecording()</code>
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">
@@ -728,7 +534,7 @@ export default function DashboardPage() {
                     href="https://posthog.com/docs/libraries/js"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-hover transition-colors underline"
+                    className="text-cyan hover:text-cyan-hover transition-colors underline"
                   >
                     posthog-js Documentation
                   </a>
@@ -736,7 +542,7 @@ export default function DashboardPage() {
                     href="https://posthog.com/docs/api"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-hover transition-colors underline"
+                    className="text-cyan hover:text-cyan-hover transition-colors underline"
                   >
                     PostHog API Reference
                   </a>
@@ -744,7 +550,7 @@ export default function DashboardPage() {
                     href="https://posthog.com/docs/data/events"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-hover transition-colors underline"
+                    className="text-cyan hover:text-cyan-hover transition-colors underline"
                   >
                     Event Types Guide
                   </a>
@@ -768,7 +574,7 @@ export default function DashboardPage() {
                           setPhCommand(entry.command);
                           showToast("Command loaded", "info");
                         }}
-                        className="ml-2 text-xs text-primary hover:text-primary-hover transition-colors shrink-0"
+                        className="ml-2 text-xs text-cyan hover:text-cyan-hover transition-colors shrink-0"
                       >
                         Reuse
                       </button>

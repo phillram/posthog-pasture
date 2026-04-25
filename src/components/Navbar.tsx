@@ -23,6 +23,9 @@ export default function Navbar() {
             <Link href="/dashboard" className="text-muted hover:text-primary transition-colors">
               📊 Dashboard
             </Link>
+            <Link href="/identify" className="text-muted hover:text-accent transition-colors">
+              👤 Identify
+            </Link>
             <Link href="/events" className="text-muted hover:text-primary transition-colors">
               📖 Events
             </Link>
