@@ -334,36 +334,15 @@ export default function FlagsPage() {
                   >
                     <code className="text-sm font-mono text-foreground">{key}</code>
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                          value === true
-                            ? "bg-success/20 text-success"
-                            : value === false
-                              ? "bg-error/20 text-error"
-                              : "bg-accent/20 text-accent"
-                        }`}
-                      >
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted/15 text-muted">
                         {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
                       </span>
-                      {typeof value === "boolean" ? (
-                        <button
-                          onClick={() => toggleProjectFlag(key, value)}
-                          className={`text-xs font-medium px-3 py-1 rounded-lg transition-colors ${
-                            value
-                              ? "bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
-                              : "bg-warning/20 hover:bg-warning/30 text-warning"
-                          }`}
-                        >
-                          {value ? "Deactivate" : "Activate"}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => toggleProjectFlag(key, value)}
-                          className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-accent/20 hover:bg-accent/30 text-accent"
-                        >
-                          Switch
-                        </button>
-                      )}
+                      <button
+                        onClick={() => toggleProjectFlag(key, value)}
+                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/15 hover:bg-success/25 text-success"
+                      >
+                        {typeof value === "boolean" ? (value ? "Deactivate" : "Activate") : "Switch"}
+                      </button>
                     </div>
                   </div>
                 ))}
