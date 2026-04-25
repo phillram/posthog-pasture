@@ -312,9 +312,13 @@ export default function FlagsPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {activeFlags.map(([key, value]) => {
                   const isOverridden = overriddenKeys.has(key);
+                  const valueLabel =
+                    typeof value === "string" ? ` = ${value}` : value === true ? " = true" : "";
+                  const tooltip = `${key}${valueLabel}${isOverridden ? " — Overridden value" : ""}`;
                   return (
                     <div
                       key={key}
+                      title={tooltip}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-mono min-w-0 ${
                         isOverridden
                           ? "bg-warning/10 border border-dashed border-warning/50 text-warning"
@@ -325,16 +329,11 @@ export default function FlagsPage() {
                         className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOverridden ? "bg-warning" : "bg-success"}`}
                       />
                       <span className="truncate">{key}</span>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                        {typeof value === "string" && (
-                          <span className={isOverridden ? "text-warning/70" : "text-success/60"}>= {value}</span>
-                        )}
-                        {isOverridden && (
-                          <span className="text-[0.6rem] uppercase tracking-wider font-semibold text-warning/80">
-                            override
-                          </span>
-                        )}
-                      </div>
+                      {typeof value === "string" && (
+                        <span className={`shrink-0 ml-auto ${isOverridden ? "text-warning/70" : "text-success/60"}`}>
+                          = {value}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -410,17 +409,16 @@ export default function FlagsPage() {
                     >
                       <code className="text-sm font-mono text-foreground truncate">{key}</code>
                       <span
+                        title={
+                          isOverridden
+                            ? "Overridden value — original value comes from your PostHog project"
+                            : undefined
+                        }
                         className={`text-xs font-medium px-2.5 py-1 rounded-full text-center truncate ${
                           isOverridden ? "bg-warning/20 text-warning" : "bg-muted/15 text-muted"
                         }`}
                       >
-                        {isOverridden
-                          ? `${value === true ? "Enabled" : value === false ? "Disabled" : String(value)} · override`
-                          : value === true
-                            ? "Enabled"
-                            : value === false
-                              ? "Disabled"
-                              : String(value)}
+                        {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
                       </span>
                       <button
                         onClick={() => toggleProjectFlag(key, value)}
