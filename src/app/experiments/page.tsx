@@ -412,11 +412,9 @@ export default function ExperimentsPage() {
                               : "bg-warning/10 border-warning/30 text-warning hover:bg-warning/20"
                           }`}
                         >
-                          <span className="flex items-center gap-1 flex-wrap leading-tight">
-                            <span className="truncate max-w-full">{key}</span>
-                            <span className="text-xs px-1 py-0 rounded font-sans shrink-0">
-                              {isExperiment ? "🧪" : "🚩"}
-                            </span>
+                          <span className="flex items-start gap-1.5 leading-tight">
+                            <span className="shrink-0 font-sans">{isExperiment ? "🧪" : "🚩"}</span>
+                            <span className="break-all">{key}</span>
                           </span>
                         </button>
                       );
