@@ -89,9 +89,9 @@ Three demo flags drive live hedgehog GIF animations — set them up in PostHog t
 | `hog-dance`  | Multivariate | `sonic`, `cgi`, `triple` | Each variant shows a different dancing hedgehog |
 | `hog-action` | Multivariate | `run`, `sleep`, `swim`   | Hedgehog running, sleeping, or swimming         |
 
-**Flags Applied to You** shows the flags currently active for your session. Click any tile to open that flag in PostHog. Tiles for flags you've overridden locally are highlighted in yellow so you can tell at a glance which values are coming from a local override versus PostHog.
+All project flags are also listed with their current values. You can activate / deactivate boolean flags, switch multivariate variants, reload from the server, or clear all local overrides. Each row also has a **Peek** button that opens the flag in PostHog in a new tab.
 
-**All Feature Flags on Project** lists every flag with its current value. Hover any flag name or value pill to see the full text in a tooltip. Locally-overridden values show in yellow; non-overridden values show in purple. You can activate / deactivate boolean flags, switch multivariate variants, reload from the server, or clear all local overrides.
+Any flag whose value you've changed locally is marked as **override** in both the *Flags Applied to You* and *All Feature Flags on Project* lists, so it's clear at a glance which values came from your project and which you've changed yourself. **Clear Overrides** wipes those markers along with the local values.
 
 ### Experiments
 
