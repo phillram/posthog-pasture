@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -7,6 +8,8 @@ import Navbar from "@/components/Navbar";
 import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
+
+const OVERRIDES_KEY = "pasture:flag-overrides";
 
 // ── Flag definitions ──
 // hog-spin:   Boolean flag. true = show spinning hedgehog, false = disabled.
@@ -40,6 +43,44 @@ export default function FlagsPage() {
 
   const { toasts, showToast } = useToast();
 
+  const [overriddenKeys, setOverriddenKeys] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(OVERRIDES_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) setOverriddenKeys(new Set(parsed.filter((x): x is string => typeof x === "string")));
+    } catch {
+      // ignore malformed sessionStorage entries
+    }
+  }, []);
+
+  const persistOverrides = (next: Set<string>) => {
+    try {
+      sessionStorage.setItem(OVERRIDES_KEY, JSON.stringify([...next]));
+    } catch {
+      // ignore quota / disabled-storage errors
+    }
+  };
+
+  const markOverride = (key: string) => {
+    setOverriddenKeys((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      persistOverrides(next);
+      return next;
+    });
+  };
+
+  const clearAllOverrides = () => {
+    setOverriddenKeys(() => {
+      const next = new Set<string>();
+      persistOverrides(next);
+      return next;
+    });
+  };
+
   if (isLoading) return null;
   if (!isAuthenticated) {
     router.push("/login");
@@ -55,6 +96,7 @@ export default function FlagsPage() {
   const overrideFlag = async (key: string, value: boolean | string) => {
     const ph = (await import("posthog-js")).default;
     ph.featureFlags.overrideFeatureFlags({ flags: { [key]: value } });
+    markOverride(key);
     reloadFeatureFlags();
     addLog({ type: "flag", name: `Flag Override: ${key}`, properties: { flag: key, value } });
     showToast(`"${key}" set to ${String(value)}`);
@@ -69,6 +111,7 @@ export default function FlagsPage() {
       next = currentValue === "control" ? "test" : "control";
     }
     ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
+    markOverride(key);
     addLog({
       type: "flag",
       name: `Flag ${typeof next === "boolean" ? (next ? "Activated" : "Deactivated") : "Switched"}: ${key}`,
@@ -85,6 +128,8 @@ export default function FlagsPage() {
     .sort(([a], [b]) => a.localeCompare(b));
 
   const allFlags = Object.entries(featureFlags).sort(([a], [b]) => a.localeCompare(b));
+
+  const posthogHost = config.apiHost.includes("eu.") ? "https://eu.posthog.com" : "https://us.posthog.com";
 
   // ── Render helpers for each flag card ──
 
@@ -265,18 +310,34 @@ export default function FlagsPage() {
             <p className="text-muted text-xs mb-4">Feature flags currently active for your session.</p>
             {activeFlags.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {activeFlags.map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-success/10 border border-success/20 text-success rounded-lg text-sm font-mono min-w-0"
-                  >
-                    <span className="w-1.5 h-1.5 bg-success rounded-full shrink-0" />
-                    <span className="truncate">{key}</span>
-                    {typeof value === "string" && (
-                      <span className="text-success/60 shrink-0 ml-auto">= {value}</span>
-                    )}
-                  </div>
-                ))}
+                {activeFlags.map(([key, value]) => {
+                  const isOverridden = overriddenKeys.has(key);
+                  return (
+                    <div
+                      key={key}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-mono min-w-0 ${
+                        isOverridden
+                          ? "bg-warning/10 border border-dashed border-warning/50 text-warning"
+                          : "bg-success/10 border border-success/20 text-success"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOverridden ? "bg-warning" : "bg-success"}`}
+                      />
+                      <span className="truncate">{key}</span>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                        {typeof value === "string" && (
+                          <span className={isOverridden ? "text-warning/70" : "text-success/60"}>= {value}</span>
+                        )}
+                        {isOverridden && (
+                          <span className="text-[0.6rem] uppercase tracking-wider font-semibold text-warning/80">
+                            override
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-muted text-sm text-center py-4">No flags are currently active for your session.</p>
@@ -308,6 +369,7 @@ export default function FlagsPage() {
                   onClick={async () => {
                     const ph = (await import("posthog-js")).default;
                     ph.featureFlags.overrideFeatureFlags(false);
+                    clearAllOverrides();
                     reloadFeatureFlags();
                     addLog({ type: "flag", name: "All Flag Overrides Cleared" });
                     showToast("All overrides cleared", "info");
@@ -329,28 +391,54 @@ export default function FlagsPage() {
             </div>
             {allFlags.length > 0 ? (
               <div className="space-y-2">
-                <div className="grid grid-cols-[1fr_6rem_6rem] items-center gap-4 px-4 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                <div className="grid grid-cols-[1fr_7rem_6rem_5rem] items-center gap-4 px-4 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
                   <span>Flag</span>
                   <span className="text-center">Current value</span>
                   <span className="text-center">Action</span>
+                  <span className="text-center">PostHog</span>
                 </div>
-                {allFlags.map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="grid grid-cols-[1fr_6rem_6rem] items-center gap-4 px-4 py-2.5 bg-input-bg border border-border rounded-lg"
-                  >
-                    <code className="text-sm font-mono text-foreground truncate">{key}</code>
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted/15 text-muted text-center truncate">
-                      {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
-                    </span>
-                    <button
-                      onClick={() => toggleProjectFlag(key, value)}
-                      className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/15 hover:bg-success/25 text-success"
+                {allFlags.map(([key, value]) => {
+                  const isOverridden = overriddenKeys.has(key);
+                  return (
+                    <div
+                      key={key}
+                      className={`grid grid-cols-[1fr_7rem_6rem_5rem] items-center gap-4 px-4 py-2.5 rounded-lg ${
+                        isOverridden
+                          ? "bg-warning/5 border border-dashed border-warning/40"
+                          : "bg-input-bg border border-border"
+                      }`}
                     >
-                      {typeof value === "boolean" ? (value ? "Deactivate" : "Activate") : "Switch"}
-                    </button>
-                  </div>
-                ))}
+                      <code className="text-sm font-mono text-foreground truncate">{key}</code>
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full text-center truncate ${
+                          isOverridden ? "bg-warning/20 text-warning" : "bg-muted/15 text-muted"
+                        }`}
+                      >
+                        {isOverridden
+                          ? `${value === true ? "Enabled" : value === false ? "Disabled" : String(value)} · override`
+                          : value === true
+                            ? "Enabled"
+                            : value === false
+                              ? "Disabled"
+                              : String(value)}
+                      </span>
+                      <button
+                        onClick={() => toggleProjectFlag(key, value)}
+                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/15 hover:bg-success/25 text-success"
+                      >
+                        {typeof value === "boolean" ? (value ? "Deactivate" : "Activate") : "Switch"}
+                      </button>
+                      <a
+                        href={`${posthogHost}/feature_flags?search=${encodeURIComponent(key)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-muted/15 hover:bg-muted/25 text-muted text-center"
+                      >
+                        Peek
+                      </a>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-muted text-sm text-center py-4">
