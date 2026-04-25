@@ -56,15 +56,18 @@ Then log in with any username + password `test`, continue as a guest, or registe
 
 ## Pages
 
-Each page is themed in its own colour so you can see at a glance which area you're in: **Events** orange, **Errors** red, **Flags** green, **People & Groups** purple, **Experiments** yellow, **Surveys** pink. The Event Log uses the same palette so each entry's badge matches the area it came from.
+Each page is themed in its own colour so you can see at a glance which area you're in: **Identify** purple, **Events** orange, **Errors** red, **Flags** green, **Experiments** yellow, **Surveys** pink, **Sandboxes** cyan. The Event Log uses the same palette so each entry's badge matches the area it came from.
 
 ### Dashboard
 
-The main workspace. Three sections:
+The main workspace. Two sections:
 
 - **Quick Events** — one-click buttons that fire common event types (purchase, signup, error, pageview, session recording start/stop, etc.). Hover any button for a tooltip showing what it sends.
-- **People & Groups** — identify a user with a distinct ID and properties, reset to anonymous, associate the user with a group (e.g. company), inspect current groups, or set person properties on the fly.
 - **Sandboxes** — run arbitrary JavaScript in an expression sandbox, or run any PostHog SDK command directly from an in-page console (with quick-command buttons and a reusable history).
+
+### Identify
+
+Manage who you are to PostHog. Identify the current user with a distinct ID and properties, reset back to anonymous, associate the user with a group (e.g. company or project), check the groups currently set, and set person properties on the fly without re-identifying.
 
 ### Events
 
@@ -131,7 +134,7 @@ Filter by **type**, search by **name or properties**, and export what you see wi
 
 ## Navigation
 
-Setup → Login / Register → Dashboard → Events → Errors → Flags → Experiments → Surveys → Event Log → Config
+Setup → Login / Register → Dashboard → Identify → Events → Errors → Flags → Experiments → Surveys → Event Log → Config
 
 ---
 

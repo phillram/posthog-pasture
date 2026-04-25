@@ -20,6 +20,8 @@
   --pink-hover: #f472b6;
   --success-hover: #4ade80;
   --error-hover: #f87171;
+  --cyan: #06b6d4;
+  --cyan-hover: #22d3ee;
 }
 
 @theme inline {
@@ -42,6 +44,8 @@
   --color-pink-hover: var(--pink-hover);
   --color-success-hover: var(--success-hover);
   --color-error-hover: var(--error-hover);
+  --color-cyan: var(--cyan);
+  --color-cyan-hover: var(--cyan-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
