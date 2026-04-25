@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -7,6 +8,8 @@ import Navbar from "@/components/Navbar";
 import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
+
+const OVERRIDES_STORAGE_KEY = "posthog_pasture_flag_overrides";
 
 // ── Flag definitions ──
 // hog-spin:   Boolean flag. true = show spinning hedgehog, false = disabled.
@@ -40,6 +43,34 @@ export default function FlagsPage() {
 
   const { toasts, showToast } = useToast();
 
+  // Track which flags have been overridden client-side, so we can highlight them.
+  // Persisted to localStorage so the marker survives a page reload (PostHog
+  // persists the actual override values in its own storage in parallel).
+  const [overrides, setOverrides] = useState<Record<string, boolean | string>>({});
+
+  useEffect(() => {
+    const saved = localStorage.getItem(OVERRIDES_STORAGE_KEY);
+    if (!saved) return;
+    try {
+      setOverrides(JSON.parse(saved));
+    } catch {
+      localStorage.removeItem(OVERRIDES_STORAGE_KEY);
+    }
+  }, []);
+
+  const recordOverride = (key: string, value: boolean | string) => {
+    setOverrides((prev) => {
+      const next = { ...prev, [key]: value };
+      localStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const clearOverrideRecord = () => {
+    setOverrides({});
+    localStorage.removeItem(OVERRIDES_STORAGE_KEY);
+  };
+
   if (isLoading) return null;
   if (!isAuthenticated) {
     router.push("/login");
@@ -50,11 +81,17 @@ export default function FlagsPage() {
     return null;
   }
 
+  // PostHog UI host (us/eu) for deep links — apiHost is the ingestion host
+  // (e.g. us.i.posthog.com), but the dashboard UI lives at us.posthog.com.
+  const posthogUiHost = config.apiHost.includes("eu.") ? "https://eu.posthog.com" : "https://us.posthog.com";
+  const flagUrl = (key: string) => `${posthogUiHost}/feature_flags?search=${encodeURIComponent(key)}`;
+
   // ── Override helpers ──
 
   const overrideFlag = async (key: string, value: boolean | string) => {
     const ph = (await import("posthog-js")).default;
     ph.featureFlags.overrideFeatureFlags({ flags: { [key]: value } });
+    recordOverride(key, value);
     reloadFeatureFlags();
     addLog({ type: "flag", name: `Flag Override: ${key}`, properties: { flag: key, value } });
     showToast(`"${key}" set to ${String(value)}`);
@@ -69,6 +106,7 @@ export default function FlagsPage() {
       next = currentValue === "control" ? "test" : "control";
     }
     ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
+    recordOverride(key, next);
     addLog({
       type: "flag",
       name: `Flag ${typeof next === "boolean" ? (next ? "Activated" : "Deactivated") : "Switched"}: ${key}`,
@@ -265,18 +303,34 @@ export default function FlagsPage() {
             <p className="text-muted text-xs mb-4">Feature flags currently active for your session.</p>
             {activeFlags.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {activeFlags.map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-success/10 border border-success/20 text-success rounded-lg text-sm font-mono min-w-0"
-                  >
-                    <span className="w-1.5 h-1.5 bg-success rounded-full shrink-0" />
-                    <span className="truncate">{key}</span>
-                    {typeof value === "string" && (
-                      <span className="text-success/60 shrink-0 ml-auto">= {value}</span>
-                    )}
-                  </div>
-                ))}
+                {activeFlags.map(([key, value]) => {
+                  const isOverridden = overrides[key] !== undefined;
+                  const valueLabel = typeof value === "string" ? ` = ${value}` : "";
+                  return (
+                    <a
+                      key={key}
+                      href={flagUrl(key)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`${key}${valueLabel}${isOverridden ? " (overridden)" : ""} — open in PostHog`}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-mono min-w-0 border transition-colors ${
+                        isOverridden
+                          ? "bg-warning/10 border-warning/30 text-warning hover:bg-warning/20"
+                          : "bg-success/10 border-success/20 text-success hover:bg-success/20"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOverridden ? "bg-warning" : "bg-success"}`}
+                      />
+                      <span className="truncate">{key}</span>
+                      {typeof value === "string" && (
+                        <span className={`shrink-0 ml-auto ${isOverridden ? "text-warning/60" : "text-success/60"}`}>
+                          = {value}
+                        </span>
+                      )}
+                    </a>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-muted text-sm text-center py-4">No flags are currently active for your session.</p>
@@ -297,17 +351,10 @@ export default function FlagsPage() {
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    window.location.reload();
-                  }}
-                  className="py-2.5 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
-                >
-                  Reload Page
-                </button>
-                <button
                   onClick={async () => {
                     const ph = (await import("posthog-js")).default;
                     ph.featureFlags.overrideFeatureFlags(false);
+                    clearOverrideRecord();
                     reloadFeatureFlags();
                     addLog({ type: "flag", name: "All Flag Overrides Cleared" });
                     showToast("All overrides cleared", "info");
@@ -334,23 +381,37 @@ export default function FlagsPage() {
                   <span className="text-center">Current value</span>
                   <span className="text-center">Action</span>
                 </div>
-                {allFlags.map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="grid grid-cols-[1fr_6rem_6rem] items-center gap-4 px-4 py-2.5 bg-input-bg border border-border rounded-lg"
-                  >
-                    <code className="text-sm font-mono text-foreground truncate">{key}</code>
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted/15 text-muted text-center truncate">
-                      {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
-                    </span>
-                    <button
-                      onClick={() => toggleProjectFlag(key, value)}
-                      className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/15 hover:bg-success/25 text-success"
+                {allFlags.map(([key, value]) => {
+                  const isOverridden = overrides[key] !== undefined;
+                  const displayValue = value === true ? "Enabled" : value === false ? "Disabled" : String(value);
+                  return (
+                    <div
+                      key={key}
+                      className="grid grid-cols-[1fr_6rem_6rem] items-center gap-4 px-4 py-2.5 bg-input-bg border border-border rounded-lg"
                     >
-                      {typeof value === "boolean" ? (value ? "Deactivate" : "Activate") : "Switch"}
-                    </button>
-                  </div>
-                ))}
+                      <code
+                        className="text-sm font-mono text-foreground truncate cursor-help"
+                        title={`${key} = ${displayValue}${isOverridden ? " (overridden)" : ""}`}
+                      >
+                        {key}
+                      </code>
+                      <span
+                        title={`${displayValue}${isOverridden ? " (overridden)" : ""}`}
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full text-center truncate cursor-help ${
+                          isOverridden ? "bg-warning/20 text-warning" : "bg-accent/20 text-accent"
+                        }`}
+                      >
+                        {displayValue}
+                      </span>
+                      <button
+                        onClick={() => toggleProjectFlag(key, value)}
+                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/15 hover:bg-success/25 text-success"
+                      >
+                        {typeof value === "boolean" ? (value ? "Deactivate" : "Activate") : "Switch"}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-muted text-sm text-center py-4">
