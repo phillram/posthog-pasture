@@ -357,14 +357,6 @@ export default function FlagsPage() {
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    window.location.reload();
-                  }}
-                  className="py-2.5 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
-                >
-                  Reload Page
-                </button>
-                <button
                   onClick={async () => {
                     const ph = (await import("posthog-js")).default;
                     ph.featureFlags.overrideFeatureFlags(false);
@@ -415,7 +407,7 @@ export default function FlagsPage() {
                             : undefined
                         }
                         className={`text-xs font-medium px-2.5 py-1 rounded-full text-center truncate ${
-                          isOverridden ? "bg-warning/20 text-warning" : "bg-muted/15 text-muted"
+                          isOverridden ? "bg-warning/20 text-warning" : "bg-accent/20 text-accent"
                         }`}
                       >
                         {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
@@ -430,9 +422,23 @@ export default function FlagsPage() {
                         href={`${posthogHost}/feature_flags?search=${encodeURIComponent(key)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-muted/15 hover:bg-muted/25 text-muted text-center"
+                        title="Opens in PostHog in a new tab"
+                        className="inline-flex items-center justify-center gap-1 text-xs font-medium px-3 py-1 rounded-lg transition-colors border border-border hover:border-foreground/40 bg-transparent text-foreground/70 hover:text-foreground"
                       >
                         Peek
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M7 17L17 7M17 7H8M17 7V16" />
+                        </svg>
                       </a>
                     </div>
                   );
