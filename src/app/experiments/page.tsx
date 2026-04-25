@@ -337,7 +337,7 @@ export default function ExperimentsPage() {
                   setRunError("");
                   setProgressLabel("");
                 }}
-                className="py-2.5 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
+                className="py-2.5 px-4 bg-warning/20 hover:bg-warning/30 text-warning font-medium rounded-lg transition-colors text-sm"
               >
                 ← New Experiment
               </button>
@@ -359,7 +359,7 @@ export default function ExperimentsPage() {
         {step === "configure" && (
           <div className="space-y-6">
             {/* Step 1: Flag selection */}
-            <section className="bg-card border border-border rounded-xl p-6">
+            <section className="bg-card border border-warning/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-3">
                 <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
                   1
@@ -370,11 +370,11 @@ export default function ExperimentsPage() {
                     onClick={() => setShowAllFlags((v) => !v)}
                     className={`ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
                       showAllFlags
-                        ? "bg-warning/20 border-warning/40 text-warning hover:bg-warning/30"
-                        : "bg-input-bg border-border text-muted hover:border-warning/50 hover:text-foreground"
+                        ? "bg-warning border-warning text-black hover:bg-warning-hover"
+                        : "bg-warning/10 border-warning/30 text-warning hover:bg-warning/20"
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${showAllFlags ? "bg-warning" : "bg-muted"}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${showAllFlags ? "bg-black" : "bg-warning"}`} />
                     {showAllFlags
                       ? `All flags (${flagNames.length})`
                       : `Experiment flags only (${experimentFlagNames.length})`}
@@ -408,17 +408,13 @@ export default function ExperimentsPage() {
                           onClick={() => setSelectedFlag(key)}
                           className={`px-2 py-1.5 rounded-lg border text-xs font-mono text-left transition-colors ${
                             selectedFlag === key
-                              ? "bg-warning/20 border-warning text-warning"
-                              : "bg-input-bg border-border text-foreground hover:border-warning/50"
+                              ? "bg-warning border-warning text-black"
+                              : "bg-warning/10 border-warning/30 text-warning hover:bg-warning/20"
                           }`}
                         >
                           <span className="flex items-center gap-1 flex-wrap leading-tight">
                             <span className="truncate max-w-full">{key}</span>
-                            <span
-                              className={`text-xs px-1 py-0 rounded font-sans shrink-0 ${
-                                isExperiment ? "bg-warning/20 text-warning" : "bg-muted/20 text-muted"
-                              }`}
-                            >
+                            <span className="text-xs px-1 py-0 rounded font-sans shrink-0">
                               {isExperiment ? "🧪" : "🚩"}
                             </span>
                           </span>
@@ -431,7 +427,7 @@ export default function ExperimentsPage() {
             </section>
 
             {/* Step 2: User count */}
-            <section className="bg-card border border-border rounded-xl p-6">
+            <section className="bg-card border border-warning/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
                 <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
                   2
@@ -445,17 +441,17 @@ export default function ExperimentsPage() {
                   max={500}
                   value={userCount}
                   onChange={(e) => setUserCount(Math.max(1, Math.min(500, parseInt(e.target.value) || 1)))}
-                  className="w-24 px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
+                  className="w-24 px-4 py-2.5 bg-input-bg border border-warning/30 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
                 />
                 <div className="flex gap-2 flex-wrap">
                   {[10, 25, 50, 100, 200].map((n) => (
                     <button
                       key={n}
                       onClick={() => setUserCount(n)}
-                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                         userCount === n
-                          ? "bg-warning text-black"
-                          : "bg-input-bg hover:bg-warning/10 text-muted border border-border"
+                          ? "bg-warning border-warning text-black"
+                          : "bg-warning/10 hover:bg-warning/20 text-warning border-warning/30"
                       }`}
                     >
                       {n}
@@ -469,7 +465,7 @@ export default function ExperimentsPage() {
             </section>
 
             {/* Step 3: Conversion rate */}
-            <section className="bg-card border border-border rounded-xl p-6">
+            <section className="bg-card border border-warning/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
                 <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
                   3
@@ -488,7 +484,7 @@ export default function ExperimentsPage() {
                     max={100}
                     value={conversionPct}
                     onChange={(e) => setConversionPct(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                    className="w-24 px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
+                    className="w-24 px-4 py-2.5 bg-input-bg border border-warning/30 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
                   />
                   <span className="ml-2 text-muted text-sm">%</span>
                 </div>
@@ -497,10 +493,10 @@ export default function ExperimentsPage() {
                     <button
                       key={n}
                       onClick={() => setConversionPct(n)}
-                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                         conversionPct === n
-                          ? "bg-warning text-black"
-                          : "bg-input-bg hover:bg-warning/10 text-muted border border-border"
+                          ? "bg-warning border-warning text-black"
+                          : "bg-warning/10 hover:bg-warning/20 text-warning border-warning/30"
                       }`}
                     >
                       {n}%
@@ -511,7 +507,7 @@ export default function ExperimentsPage() {
             </section>
 
             {/* Step 4: Conversion action */}
-            <section className="bg-card border border-border rounded-xl p-6">
+            <section className="bg-card border border-warning/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
                 <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
                   4
@@ -524,20 +520,20 @@ export default function ExperimentsPage() {
                   <button
                     key={action.event}
                     onClick={() => setSelectedAction(action.event)}
-                    className={`px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                    className={`min-w-0 overflow-hidden px-3 py-2.5 rounded-lg border text-left transition-colors ${
                       selectedAction === action.event
-                        ? "bg-warning/20 border-warning text-warning"
-                        : "bg-input-bg border-border text-foreground hover:border-warning/50"
+                        ? "bg-warning border-warning text-black"
+                        : "bg-warning/10 border-warning/30 text-warning hover:bg-warning/20"
                     }`}
                   >
-                    <span className="block text-sm font-semibold">{action.label}</span>
+                    <span className="block text-sm font-semibold truncate">{action.label}</span>
                     <span
-                      className={`block text-xs font-mono mt-0.5 ${selectedAction === action.event ? "text-warning/80" : "text-muted"}`}
+                      className={`block text-xs font-mono mt-0.5 truncate ${selectedAction === action.event ? "text-black/80" : "text-warning/80"}`}
                     >
                       {action.event}
                     </span>
                     <span
-                      className={`block text-xs mt-0.5 ${selectedAction === action.event ? "text-warning/70" : "text-muted/70"}`}
+                      className={`block text-xs mt-0.5 break-all ${selectedAction === action.event ? "text-black/70" : "text-warning/70"}`}
                     >
                       {JSON.stringify(action.props)}
                     </span>
@@ -585,7 +581,7 @@ export default function ExperimentsPage() {
 
         {/* ── Running step ── */}
         {step === "running" && (
-          <div className="bg-card border border-border rounded-xl p-10 flex flex-col items-center text-center space-y-6">
+          <div className="bg-card border border-warning/30 rounded-xl p-10 flex flex-col items-center text-center space-y-6">
             <div className="text-5xl animate-pulse">🧪</div>
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-1">Running experiment…</h2>
@@ -640,7 +636,7 @@ export default function ExperimentsPage() {
 
             {/* Stats row */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-card border border-border rounded-xl p-4 text-center">
+              <div className="bg-card border border-warning/30 rounded-xl p-4 text-center">
                 <p className="text-2xl font-bold text-foreground">{results.length}</p>
                 <p className="text-xs text-muted mt-1">Total users</p>
               </div>
@@ -662,16 +658,18 @@ export default function ExperimentsPage() {
             {(() => {
               const uniqueVariants = [...new Set(results.map((u) => u.variant))].sort();
               return (
-                <div className="bg-card border border-border rounded-xl p-6">
+                <div className="bg-card border border-warning/30 rounded-xl p-6">
                   <h3 className="text-sm font-semibold text-foreground mb-3">Variant breakdown</h3>
                   <div className={`grid gap-3 ${uniqueVariants.length <= 2 ? "grid-cols-2" : "grid-cols-3"}`}>
                     {uniqueVariants.map((v) => {
                       const group = results.filter((u) => u.variant === v);
                       const converted = group.filter((u) => u.actionCompleted).length;
                       return (
-                        <div key={v} className="bg-input-bg border border-border rounded-lg p-3">
-                          <p className="font-mono text-sm text-foreground font-medium">{v}</p>
-                          <p className="text-xs text-muted mt-1">
+                        <div key={v} className="bg-input-bg border border-warning/20 rounded-lg p-3">
+                          <span className="inline-block font-mono text-sm font-medium px-2 py-0.5 rounded bg-warning/20 text-warning">
+                            {v}
+                          </span>
+                          <p className="text-xs text-muted mt-2">
                             {group.length} users · {converted} converted
                           </p>
                           <p className="text-xs font-semibold text-warning mt-0.5">
@@ -686,7 +684,7 @@ export default function ExperimentsPage() {
             })()}
 
             {/* Results table */}
-            <div className="bg-card border border-border rounded-xl p-6">
+            <div className="bg-card border border-warning/30 rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-foreground">User results</h3>
                 <a
@@ -714,11 +712,9 @@ export default function ExperimentsPage() {
                         <td className="py-1.5 pr-4">
                           <span
                             className={`px-2 py-0.5 text-xs rounded font-mono ${
-                              u.variant === "control"
-                                ? "bg-muted/20 text-muted"
-                                : u.variant === "false"
-                                  ? "bg-error/10 text-error/60"
-                                  : "bg-accent/10 text-accent"
+                              u.variant === "false"
+                                ? "bg-muted/20 text-muted/70"
+                                : "bg-warning/20 text-warning"
                             }`}
                           >
                             {u.variant}
