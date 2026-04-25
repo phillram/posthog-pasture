@@ -264,16 +264,18 @@ export default function FlagsPage() {
           <div className="bg-card border border-success/30 rounded-xl p-6">
             <p className="text-muted text-xs mb-4">Feature flags currently active for your session.</p>
             {activeFlags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {activeFlags.map(([key, value]) => (
-                  <span
+                  <div
                     key={key}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-success/10 border border-success/20 text-success rounded-lg text-sm font-mono"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-success/10 border border-success/20 text-success rounded-lg text-sm font-mono min-w-0"
                   >
-                    <span className="w-1.5 h-1.5 bg-success rounded-full" />
-                    {key}
-                    {typeof value === "string" && <span className="text-success/60">= {value}</span>}
-                  </span>
+                    <span className="w-1.5 h-1.5 bg-success rounded-full shrink-0" />
+                    <span className="truncate">{key}</span>
+                    {typeof value === "string" && (
+                      <span className="text-success/60 shrink-0 ml-auto">= {value}</span>
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (
@@ -327,6 +329,11 @@ export default function FlagsPage() {
             </div>
             {allFlags.length > 0 ? (
               <div className="space-y-2">
+                <div className="grid grid-cols-[1fr_6rem_6rem] items-center gap-4 px-4 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                  <span>Flag</span>
+                  <span className="text-center">Current value</span>
+                  <span className="text-center">Action</span>
+                </div>
                 {allFlags.map(([key, value]) => (
                   <div
                     key={key}
