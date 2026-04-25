@@ -109,10 +109,10 @@ export default function SurveysPage() {
 
         <section>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 bg-pink-500 rounded-full" />
+            <div className="w-1 h-6 bg-pink rounded-full" />
             <h2 className="text-lg font-semibold text-foreground">Surveys</h2>
           </div>
-          <div className="bg-card border border-pink-500/30 rounded-xl p-6">
+          <div className="bg-card border border-pink/30 rounded-xl p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-3 text-xs text-muted">
                 <span>
@@ -123,17 +123,17 @@ export default function SurveysPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowAllStatuses((v) => !v)}
-                  className={`py-2 px-4 font-medium rounded-lg transition-colors text-sm ${
+                  className={`py-2.5 px-4 font-medium rounded-lg transition-colors text-sm ${
                     showAllStatuses
-                      ? "bg-pink-600 hover:bg-pink-500 text-white"
-                      : "bg-pink-500/10 hover:bg-pink-500/20 text-pink-400"
+                      ? "bg-pink hover:bg-pink-hover text-white"
+                      : "bg-pink/10 hover:bg-pink/20 text-pink"
                   }`}
                 >
                   {showAllStatuses ? "Running Only" : "Show All Statuses"}
                 </button>
                 <button
                   onClick={() => loadSurveys()}
-                  className="py-2 px-4 bg-pink-500/20 hover:bg-pink-500/30 text-pink-400 font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-pink/20 hover:bg-pink/30 text-pink font-medium rounded-lg transition-colors text-sm"
                 >
                   {surveyLoading ? "Loading..." : "Reload Surveys"}
                 </button>

@@ -13,8 +13,13 @@
   --success: #22c55e;
   --error: #ef4444;
   --warning: #eab308;
+  --warning-hover: #facc15;
   --muted: #71717a;
   --input-bg: #12121a;
+  --pink: #ec4899;
+  --pink-hover: #f472b6;
+  --success-hover: #4ade80;
+  --error-hover: #f87171;
 }
 
 @theme inline {
@@ -30,8 +35,13 @@
   --color-success: var(--success);
   --color-error: var(--error);
   --color-warning: var(--warning);
+  --color-warning-hover: var(--warning-hover);
   --color-muted: var(--muted);
   --color-input-bg: var(--input-bg);
+  --color-pink: var(--pink);
+  --color-pink-hover: var(--pink-hover);
+  --color-success-hover: var(--success-hover);
+  --color-error-hover: var(--error-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

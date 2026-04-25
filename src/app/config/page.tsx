@@ -69,7 +69,7 @@ export default function ConfigPage() {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="phc_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              className="w-full px-4 py-3 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
+              className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
             />
           </div>
 
@@ -78,7 +78,7 @@ export default function ConfigPage() {
             <select
               value={apiHost}
               onChange={(e) => setApiHost(e.target.value)}
-              className="w-full px-4 py-3 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
             >
               <option value="https://us.i.posthog.com">US Cloud (us.i.posthog.com)</option>
               <option value="https://eu.i.posthog.com">EU Cloud (eu.i.posthog.com)</option>
@@ -122,10 +122,10 @@ export default function ConfigPage() {
               </div>
               <button
                 onClick={() => updateConfig({ [key]: !config[key] })}
-                className={`relative w-12 h-6 rounded-full transition-colors ${config[key] ? "bg-success" : "bg-muted/30"}`}
+                className={`relative w-10 h-5 rounded-full transition-colors ${config[key] ? "bg-success" : "bg-muted/30"}`}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${config[key] ? "translate-x-6" : "translate-x-0"}`}
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${config[key] ? "translate-x-5" : "translate-x-0"}`}
                 />
               </button>
             </div>
@@ -138,10 +138,10 @@ export default function ConfigPage() {
             </div>
             <button
               onClick={() => updateConfig({ disableSessionRecording: !config.disableSessionRecording })}
-              className={`relative w-12 h-6 rounded-full transition-colors ${config.disableSessionRecording ? "bg-error" : "bg-muted/30"}`}
+              className={`relative w-10 h-5 rounded-full transition-colors ${config.disableSessionRecording ? "bg-error" : "bg-muted/30"}`}
             >
               <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${config.disableSessionRecording ? "translate-x-6" : "translate-x-0"}`}
+                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${config.disableSessionRecording ? "translate-x-5" : "translate-x-0"}`}
               />
             </button>
           </div>
@@ -159,13 +159,13 @@ export default function ConfigPage() {
           <div className="flex gap-3">
             <button
               onClick={optIn}
-              className="flex-1 py-3 bg-success/20 hover:bg-success/30 text-success font-medium rounded-lg transition-colors text-sm"
+              className="flex-1 py-2.5 px-4 bg-success/20 hover:bg-success/30 text-success font-medium rounded-lg transition-colors text-sm"
             >
               Opt In
             </button>
             <button
               onClick={optOut}
-              className="flex-1 py-3 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+              className="flex-1 py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
             >
               Opt Out
             </button>
@@ -183,7 +183,7 @@ export default function ConfigPage() {
             </div>
             <button
               onClick={resetPerson}
-              className="py-2 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+              className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
             >
               Reset Person
             </button>
@@ -196,7 +196,7 @@ export default function ConfigPage() {
             </div>
             <button
               onClick={handleFullReset}
-              className="py-2 px-4 bg-error hover:bg-red-600 text-white font-medium rounded-lg transition-colors text-sm"
+              className="py-2.5 px-4 bg-error hover:bg-error-hover text-white font-medium rounded-lg transition-colors text-sm"
             >
               Reset Everything
             </button>
