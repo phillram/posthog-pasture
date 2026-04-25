@@ -165,10 +165,10 @@ export default function FlagsPage() {
               </p>
               <button
                 onClick={() => overrideFlag("hog-spin", hogSpin !== true)}
-                className={`w-full py-2.5 font-medium rounded-lg transition-colors text-sm ${
+                className={`w-full py-2.5 px-4 font-medium rounded-lg transition-colors text-sm ${
                   hogSpin === true
                     ? "bg-success/20 hover:bg-success/30 text-success"
-                    : "bg-success hover:bg-success/80 text-white"
+                    : "bg-success hover:bg-success-hover text-white"
                 }`}
               >
                 {hogSpin === true ? "Deactivate" : "Activate"}
@@ -298,7 +298,7 @@ export default function FlagsPage() {
                   onClick={() => {
                     window.location.reload();
                   }}
-                  className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
                 >
                   Reload Page
                 </button>
@@ -310,7 +310,7 @@ export default function FlagsPage() {
                     addLog({ type: "flag", name: "All Flag Overrides Cleared" });
                     showToast("All overrides cleared", "info");
                   }}
-                  className="py-2 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
                 >
                   Clear Overrides
                 </button>
@@ -319,7 +319,7 @@ export default function FlagsPage() {
                     reloadFeatureFlags();
                     showToast("Feature flags reloaded");
                   }}
-                  className="py-2 px-4 bg-success/20 hover:bg-success/30 text-success font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-success/20 hover:bg-success/30 text-success font-medium rounded-lg transition-colors text-sm"
                 >
                   Reload Flags
                 </button>
@@ -348,10 +348,10 @@ export default function FlagsPage() {
                       {typeof value === "boolean" ? (
                         <button
                           onClick={() => toggleProjectFlag(key, value)}
-                          className={`text-xs font-medium px-3 py-1 rounded-lg transition-colors ${
+                          className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
                             value
                               ? "bg-success/20 hover:bg-success/30 text-success"
-                              : "bg-success hover:bg-success/80 text-white"
+                              : "bg-success hover:bg-success-hover text-white"
                           }`}
                         >
                           {value ? "Deactivate" : "Activate"}
@@ -359,7 +359,7 @@ export default function FlagsPage() {
                       ) : (
                         <button
                           onClick={() => toggleProjectFlag(key, value)}
-                          className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/20 hover:bg-success/30 text-success"
+                          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors bg-success/20 hover:bg-success/30 text-success"
                         >
                           Switch
                         </button>

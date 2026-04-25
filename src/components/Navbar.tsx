@@ -57,7 +57,7 @@ export default function Navbar() {
         {isAuthenticated && (
           <>
             <span className="text-sm text-muted">{user?.isGuest ? "Guest" : user?.name}</span>
-            <button onClick={logout} className="text-sm text-error hover:text-error/70 transition-colors">
+            <button onClick={logout} className="text-sm text-error hover:text-error-hover transition-colors">
               Logout
             </button>
           </>

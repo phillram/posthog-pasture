@@ -141,7 +141,7 @@ export default function SurveyCard({ survey, onTrigger, onSubmit }: Props) {
                 <textarea
                   value={(responses[qi] as string) ?? ""}
                   onChange={(e) => setResponseAt(qi, e.target.value)}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pink"
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pink"
                   rows={2}
                 />
               )}
@@ -219,7 +219,7 @@ export default function SurveyCard({ survey, onTrigger, onSubmit }: Props) {
           ))}
           <button
             onClick={handleSubmit}
-            className="py-2 px-4 bg-pink hover:bg-pink-hover text-white font-medium rounded-lg transition-colors text-sm"
+            className="py-2.5 px-4 bg-pink hover:bg-pink-hover text-white font-medium rounded-lg transition-colors text-sm"
           >
             Submit response
           </button>

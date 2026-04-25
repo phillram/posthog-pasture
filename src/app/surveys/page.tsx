@@ -123,7 +123,7 @@ export default function SurveysPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowAllStatuses((v) => !v)}
-                  className={`py-2 px-4 font-medium rounded-lg transition-colors text-sm ${
+                  className={`py-2.5 px-4 font-medium rounded-lg transition-colors text-sm ${
                     showAllStatuses
                       ? "bg-pink hover:bg-pink-hover text-white"
                       : "bg-pink/10 hover:bg-pink/20 text-pink"
@@ -133,7 +133,7 @@ export default function SurveysPage() {
                 </button>
                 <button
                   onClick={() => loadSurveys()}
-                  className="py-2 px-4 bg-pink/20 hover:bg-pink/30 text-pink font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-pink/20 hover:bg-pink/30 text-pink font-medium rounded-lg transition-colors text-sm"
                 >
                   {surveyLoading ? "Loading..." : "Reload Surveys"}
                 </button>

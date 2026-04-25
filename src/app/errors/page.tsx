@@ -107,7 +107,7 @@ export default function ErrorsPage() {
               </div>
               <button
                 onClick={triggerError}
-                className="py-2 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+                className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
               >
                 Quick Trigger Error
               </button>
@@ -126,7 +126,7 @@ export default function ErrorsPage() {
                   <select
                     value={exceptionType}
                     onChange={(e) => setExceptionType(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground text-sm"
+                    className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground text-sm"
                   >
                     <option value="TypeError">TypeError</option>
                     <option value="ReferenceError">ReferenceError</option>
@@ -147,7 +147,7 @@ export default function ErrorsPage() {
                     value={exceptionLineNo}
                     onChange={(e) => setExceptionLineNo(e.target.value)}
                     placeholder="42"
-                    className="w-full px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
+                    className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
                   />
                 </div>
               </div>
@@ -158,7 +158,7 @@ export default function ErrorsPage() {
                   value={exceptionSource}
                   onChange={(e) => setExceptionSource(e.target.value)}
                   placeholder="components/UserList.tsx"
-                  className="w-full px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
+                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -178,7 +178,7 @@ export default function ErrorsPage() {
               </div>
               <button
                 onClick={handleCustomException}
-                className="w-full py-2.5 bg-error/80 hover:bg-error text-white font-medium rounded-lg transition-colors text-sm"
+                className="w-full py-2.5 px-4 bg-error hover:bg-error-hover text-white font-medium rounded-lg transition-colors text-sm"
               >
                 Capture Exception
               </button>

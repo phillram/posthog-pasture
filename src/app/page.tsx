@@ -90,7 +90,7 @@ export default function SetupPage() {
                 setKeyError("");
               }}
               placeholder="phc_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              className={`w-full px-4 py-3 bg-input-bg border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm ${keyError ? "border-error" : "border-border"}`}
+              className={`w-full px-4 py-2.5 bg-input-bg border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm ${keyError ? "border-error" : "border-border"}`}
             />
             <p className="text-xs text-muted mt-2">Find this in PostHog → Project Settings → Project API Key</p>
           </div>
@@ -103,7 +103,7 @@ export default function SetupPage() {
                 setApiHost(e.target.value);
                 setKeyError("");
               }}
-              className="w-full px-4 py-3 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
             >
               <option value="https://us.i.posthog.com">US Cloud (us.i.posthog.com)</option>
               <option value="https://eu.i.posthog.com">EU Cloud (eu.i.posthog.com)</option>

@@ -56,7 +56,7 @@ Then log in with any username + password `test`, continue as a guest, or registe
 
 ## Pages
 
-Each page is themed in its own color so you can see at a glance which area you're in: **Events** orange, **Errors** red, **Flags** green, **People & Groups** purple, **Experiments** yellow, **Surveys** pink.
+Each page is themed in its own colour so you can see at a glance which area you're in: **Events** orange, **Errors** red, **Flags** green, **People & Groups** purple, **Experiments** yellow, **Surveys** pink. The Event Log uses the same palette so each entry's badge matches the area it came from.
 
 ### Dashboard
 

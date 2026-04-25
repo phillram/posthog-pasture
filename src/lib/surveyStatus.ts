@@ -23,7 +23,6 @@ export function surveyStatus(survey: Survey): SurveyStatus {
   return "draft";
 }
 
-// Colours mirror the PostHog product UI: gray / green / purple / black.
 export const statusBadgeClasses: Record<SurveyStatus, string> = {
   draft: "bg-muted/20 text-muted",
   running: "bg-success/20 text-success",

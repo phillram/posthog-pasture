@@ -337,7 +337,7 @@ export default function ExperimentsPage() {
                   setRunError("");
                   setProgressLabel("");
                 }}
-                className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
+                className="py-2.5 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
               >
                 ← New Experiment
               </button>
@@ -445,14 +445,14 @@ export default function ExperimentsPage() {
                   max={500}
                   value={userCount}
                   onChange={(e) => setUserCount(Math.max(1, Math.min(500, parseInt(e.target.value) || 1)))}
-                  className="w-24 px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
+                  className="w-24 px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
                 />
                 <div className="flex gap-2 flex-wrap">
                   {[10, 25, 50, 100, 200].map((n) => (
                     <button
                       key={n}
                       onClick={() => setUserCount(n)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                         userCount === n
                           ? "bg-warning text-black"
                           : "bg-input-bg hover:bg-warning/10 text-muted border border-border"
@@ -488,7 +488,7 @@ export default function ExperimentsPage() {
                     max={100}
                     value={conversionPct}
                     onChange={(e) => setConversionPct(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                    className="w-24 px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
+                    className="w-24 px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
                   />
                   <span className="ml-2 text-muted text-sm">%</span>
                 </div>
@@ -497,7 +497,7 @@ export default function ExperimentsPage() {
                     <button
                       key={n}
                       onClick={() => setConversionPct(n)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                         conversionPct === n
                           ? "bg-warning text-black"
                           : "bg-input-bg hover:bg-warning/10 text-muted border border-border"
@@ -572,7 +572,7 @@ export default function ExperimentsPage() {
               <button
                 onClick={runExperiment}
                 disabled={!selectedFlag || !isInitialized}
-                className="w-full py-3 bg-warning hover:bg-warning/80 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-warning hover:bg-warning-hover text-black font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🚀 Start Experiment
               </button>

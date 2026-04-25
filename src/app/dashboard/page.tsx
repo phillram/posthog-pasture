@@ -391,7 +391,7 @@ export default function DashboardPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleGroupIdentify}
-                    className="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
+                    className="flex-1 py-2.5 px-4 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
                   >
                     Group Identify
                   </button>
@@ -619,7 +619,7 @@ export default function DashboardPage() {
               <div className="flex gap-2 items-center">
                 <button
                   onClick={handlePhCommand}
-                  className="py-2.5 px-6 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
                 >
                   Execute
                 </button>
@@ -628,7 +628,7 @@ export default function DashboardPage() {
                     setPhHistory([]);
                     showToast("History cleared", "info");
                   }}
-                  className="ml-auto py-2 px-3 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-xs"
+                  className="ml-auto py-2.5 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
                 >
                   Clear History
                 </button>
