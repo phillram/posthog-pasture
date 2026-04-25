@@ -329,16 +329,11 @@ export default function FlagsPage() {
                         className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOverridden ? "bg-warning" : "bg-success"}`}
                       />
                       <span className="truncate">{key}</span>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                        {typeof value === "string" && (
-                          <span className={isOverridden ? "text-warning/70" : "text-success/60"}>= {value}</span>
-                        )}
-                        {isOverridden && (
-                          <span className="text-[0.6rem] uppercase tracking-wider font-semibold text-warning/80">
-                            override
-                          </span>
-                        )}
-                      </div>
+                      {typeof value === "string" && (
+                        <span className={`shrink-0 ml-auto ${isOverridden ? "text-warning/70" : "text-success/60"}`}>
+                          = {value}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -415,13 +410,7 @@ export default function FlagsPage() {
                           isOverridden ? "bg-warning/20 text-warning" : "bg-accent/20 text-accent"
                         }`}
                       >
-                        {isOverridden
-                          ? `${value === true ? "Enabled" : value === false ? "Disabled" : String(value)} · override`
-                          : value === true
-                            ? "Enabled"
-                            : value === false
-                              ? "Disabled"
-                              : String(value)}
+                        {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
                       </span>
                       <button
                         onClick={() => toggleProjectFlag(key, value)}

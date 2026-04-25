@@ -91,7 +91,7 @@ Three demo flags drive live hedgehog GIF animations — set them up in PostHog t
 
 All project flags are also listed with their current values. You can activate / deactivate boolean flags, switch multivariate variants, reload from the server, or clear all local overrides. Each row also has a **Peek** button that opens the flag in PostHog in a new tab.
 
-Any flag whose value you've changed locally is marked as **override** in both the *Flags Applied to You* and *All Feature Flags on Project* lists, so it's clear at a glance which values came from your project and which you've changed yourself. Hover any tile in *Flags Applied to You* to see the full flag name and value (with an "Overridden value" note when applicable); hover the value pill on an overridden row in the project-wide list for the same context. **Clear Overrides** wipes those markers along with the local values.
+Any flag whose value you've changed locally is highlighted with a dashed warning-colored outline in both the *Flags Applied to You* and *All Feature Flags on Project* lists, so it's clear at a glance which values came from your project and which you've changed yourself. Hover over a highlighted pill to confirm it's an override. **Clear Overrides** wipes those markers along with the local values.
 
 ### Experiments
 
