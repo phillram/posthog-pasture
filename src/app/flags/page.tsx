@@ -143,12 +143,12 @@ export default function FlagsPage() {
         {/* ── Hedgehog Feature Flags ── */}
         <section>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 bg-warning rounded-full" />
+            <div className="w-1 h-6 bg-success rounded-full" />
             <h2 className="text-lg font-semibold text-foreground">Hedgehog Feature Flags</h2>
           </div>
           <p className="text-muted text-sm mb-4">
             Each flag controls a different hedgehog. Toggle values to see who appears!
-            {!flagsReady && <span className="ml-2 text-warning text-xs">(Waiting for flags to load...)</span>}
+            {!flagsReady && <span className="ml-2 text-success text-xs">(Waiting for flags to load...)</span>}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -165,10 +165,10 @@ export default function FlagsPage() {
               </p>
               <button
                 onClick={() => overrideFlag("hog-spin", hogSpin !== true)}
-                className={`w-full py-2.5 font-medium rounded-lg transition-colors text-sm ${
+                className={`w-full py-2.5 px-4 font-medium rounded-lg transition-colors text-sm ${
                   hogSpin === true
-                    ? "bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
-                    : "bg-warning/20 hover:bg-warning/30 text-warning"
+                    ? "bg-success/20 hover:bg-success/30 text-success"
+                    : "bg-success hover:bg-success-hover text-white"
                 }`}
               >
                 {hogSpin === true ? "Deactivate" : "Activate"}
@@ -189,26 +189,26 @@ export default function FlagsPage() {
               <div className="grid grid-cols-3 gap-1.5 w-full mb-2">
                 <button
                   onClick={() => overrideFlag("hog-dance", "sonic")}
-                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogDance === "sonic" ? "bg-warning text-black" : "bg-warning/20 hover:bg-warning/30 text-warning"}`}
+                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogDance === "sonic" ? "bg-success text-white" : "bg-success/20 hover:bg-success/30 text-success"}`}
                 >
                   Sonic
                 </button>
                 <button
                   onClick={() => overrideFlag("hog-dance", "cgi")}
-                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogDance === "cgi" ? "bg-warning text-black" : "bg-warning/20 hover:bg-warning/30 text-warning"}`}
+                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogDance === "cgi" ? "bg-success text-white" : "bg-success/20 hover:bg-success/30 text-success"}`}
                 >
                   CGI
                 </button>
                 <button
                   onClick={() => overrideFlag("hog-dance", "triple")}
-                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogDance === "triple" ? "bg-warning text-black" : "bg-warning/20 hover:bg-warning/30 text-warning"}`}
+                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogDance === "triple" ? "bg-success text-white" : "bg-success/20 hover:bg-success/30 text-success"}`}
                 >
                   Triple
                 </button>
               </div>
               <button
                 onClick={() => overrideFlag("hog-dance", false)}
-                className="w-full py-2 text-xs font-medium rounded-lg transition-colors bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
+                className="w-full py-2 text-xs font-medium rounded-lg transition-colors bg-success/20 hover:bg-success/30 text-success"
               >
                 Disable
               </button>
@@ -228,26 +228,26 @@ export default function FlagsPage() {
               <div className="grid grid-cols-3 gap-1.5 w-full mb-2">
                 <button
                   onClick={() => overrideFlag("hog-action", "run")}
-                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogAction === "run" ? "bg-warning text-black" : "bg-warning/20 hover:bg-warning/30 text-warning"}`}
+                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogAction === "run" ? "bg-success text-white" : "bg-success/20 hover:bg-success/30 text-success"}`}
                 >
                   Run
                 </button>
                 <button
                   onClick={() => overrideFlag("hog-action", "sleep")}
-                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogAction === "sleep" ? "bg-warning text-black" : "bg-warning/20 hover:bg-warning/30 text-warning"}`}
+                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogAction === "sleep" ? "bg-success text-white" : "bg-success/20 hover:bg-success/30 text-success"}`}
                 >
                   Sleep
                 </button>
                 <button
                   onClick={() => overrideFlag("hog-action", "swim")}
-                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogAction === "swim" ? "bg-warning text-black" : "bg-warning/20 hover:bg-warning/30 text-warning"}`}
+                  className={`py-2 text-xs font-medium rounded-lg transition-colors ${hogAction === "swim" ? "bg-success text-white" : "bg-success/20 hover:bg-success/30 text-success"}`}
                 >
                   Swim
                 </button>
               </div>
               <button
                 onClick={() => overrideFlag("hog-action", false)}
-                className="w-full py-2 text-xs font-medium rounded-lg transition-colors bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
+                className="w-full py-2 text-xs font-medium rounded-lg transition-colors bg-success/20 hover:bg-success/30 text-success"
               >
                 Disable
               </button>
@@ -285,7 +285,7 @@ export default function FlagsPage() {
         {/* ── All Feature Flags on Project ── */}
         <section>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 bg-primary rounded-full" />
+            <div className="w-1 h-6 bg-success rounded-full" />
             <h2 className="text-lg font-semibold text-foreground">All Feature Flags on Project</h2>
           </div>
           <div className="bg-card border border-border rounded-xl p-6">
@@ -298,7 +298,7 @@ export default function FlagsPage() {
                   onClick={() => {
                     window.location.reload();
                   }}
-                  className="py-2 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-muted/20 hover:bg-muted/30 text-muted font-medium rounded-lg transition-colors text-sm"
                 >
                   Reload Page
                 </button>
@@ -310,7 +310,7 @@ export default function FlagsPage() {
                     addLog({ type: "flag", name: "All Flag Overrides Cleared" });
                     showToast("All overrides cleared", "info");
                   }}
-                  className="py-2 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
                 >
                   Clear Overrides
                 </button>
@@ -319,7 +319,7 @@ export default function FlagsPage() {
                     reloadFeatureFlags();
                     showToast("Feature flags reloaded");
                   }}
-                  className="py-2 px-4 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-sm"
+                  className="py-2.5 px-4 bg-success/20 hover:bg-success/30 text-success font-medium rounded-lg transition-colors text-sm"
                 >
                   Reload Flags
                 </button>
@@ -348,10 +348,10 @@ export default function FlagsPage() {
                       {typeof value === "boolean" ? (
                         <button
                           onClick={() => toggleProjectFlag(key, value)}
-                          className={`text-xs font-medium px-3 py-1 rounded-lg transition-colors ${
+                          className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
                             value
-                              ? "bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
-                              : "bg-warning/20 hover:bg-warning/30 text-warning"
+                              ? "bg-success/20 hover:bg-success/30 text-success"
+                              : "bg-success hover:bg-success-hover text-white"
                           }`}
                         >
                           {value ? "Deactivate" : "Activate"}
@@ -359,7 +359,7 @@ export default function FlagsPage() {
                       ) : (
                         <button
                           onClick={() => toggleProjectFlag(key, value)}
-                          className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-accent/20 hover:bg-accent/30 text-accent"
+                          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors bg-success/20 hover:bg-success/30 text-success"
                         >
                           Switch
                         </button>

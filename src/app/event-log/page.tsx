@@ -9,28 +9,31 @@ import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
 
+// Each type maps to its source feature's color so log entries match the rest of the UI:
+// event/pageview/recording = orange (events), identify/person/group = purple (people),
+// flag = green (flags), error = red (errors), config = neutral.
 const typeColors: Record<string, string> = {
   event: "text-primary",
   identify: "text-accent",
-  pageview: "text-success",
-  group: "text-warning",
+  pageview: "text-primary",
+  group: "text-accent",
   error: "text-error",
   config: "text-muted",
   person: "text-accent",
-  flag: "text-warning",
-  recording: "text-success",
+  flag: "text-success",
+  recording: "text-primary",
 };
 
 const typeBadgeColors: Record<string, string> = {
   event: "bg-primary/20 text-primary",
   identify: "bg-accent/20 text-accent",
-  pageview: "bg-success/20 text-success",
-  group: "bg-warning/20 text-warning",
+  pageview: "bg-primary/20 text-primary",
+  group: "bg-accent/20 text-accent",
   error: "bg-error/20 text-error",
   config: "bg-muted/20 text-muted",
   person: "bg-accent/20 text-accent",
-  flag: "bg-warning/20 text-warning",
-  recording: "bg-success/20 text-success",
+  flag: "bg-success/20 text-success",
+  recording: "bg-primary/20 text-primary",
 };
 
 const TYPE_OPTIONS = ["all", "event", "identify", "pageview", "group", "error", "config", "person", "flag", "recording"] as const;
@@ -127,7 +130,7 @@ export default function EventLogPage() {
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value as (typeof TYPE_OPTIONS)[number])}
-                  className="px-3 py-1.5 bg-input-bg border border-border rounded-lg text-foreground text-sm"
+                  className="px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground text-sm"
                 >
                   {TYPE_OPTIONS.map((t) => (
                     <option key={t} value={t}>
@@ -141,20 +144,20 @@ export default function EventLogPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search name or properties…"
-                className="flex-1 min-w-[200px] px-3 py-1.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted text-sm"
+                className="flex-1 min-w-[200px] px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted text-sm"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleCopyJson}
                   disabled={filtered.length === 0}
-                  className="py-1.5 px-3 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="py-2.5 px-4 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Copy JSON
                 </button>
                 <button
                   onClick={handleDownloadJson}
                   disabled={filtered.length === 0}
-                  className="py-1.5 px-3 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="py-2.5 px-4 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Download JSON
                 </button>

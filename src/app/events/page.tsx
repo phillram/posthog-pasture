@@ -228,14 +228,14 @@ const eventTypes: EventTypeInfo[] = [
 
 const categoryColors: Record<string, string> = {
   "Custom Events": "border-primary/30",
-  "Page & Screen Events": "border-success/30",
+  "Page & Screen Events": "border-primary/30",
   Identification: "border-accent/30",
   "Person Properties": "border-accent/30",
-  Groups: "border-warning/30",
+  Groups: "border-accent/30",
   "Super Properties": "border-primary/30",
   "Errors & Exceptions": "border-error/30",
-  "Feature Flags": "border-warning/30",
-  "Session Recording": "border-success/30",
+  "Feature Flags": "border-success/30",
+  "Session Recording": "border-primary/30",
   "Opt In / Opt Out": "border-muted/30",
 };
 
@@ -361,7 +361,7 @@ export default function EventsPage() {
                 />
                 <button
                   onClick={handleCustomEvent}
-                  className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                  className="w-full py-2.5 px-4 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
                 >
                   Capture Event
                 </button>
@@ -381,7 +381,7 @@ export default function EventsPage() {
                 />
                 <button
                   onClick={handleSuperProps}
-                  className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
+                  className="w-full py-2.5 px-4 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm"
                 >
                   Register Super Properties
                 </button>
@@ -422,7 +422,7 @@ export default function EventsPage() {
                     addLog({ type: "config", name: "Active Super Properties Viewed", properties: userProps });
                     showToast(`${Object.keys(userProps).length} super properties found`);
                   }}
-                  className="w-full py-2.5 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-sm"
+                  className="w-full py-2.5 px-4 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-sm"
                 >
                   Show Active Super Properties
                 </button>
@@ -454,7 +454,7 @@ export default function EventsPage() {
         {/* ── Event Reference ── */}
         <div className="pt-2">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 bg-accent rounded-full" />
+            <div className="w-1 h-6 bg-primary rounded-full" />
             <h2 className="text-lg font-semibold text-foreground">Event Reference</h2>
           </div>
           <p className="text-muted text-sm mb-4">
