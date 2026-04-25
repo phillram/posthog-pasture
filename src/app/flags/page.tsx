@@ -334,17 +334,15 @@ export default function FlagsPage() {
                   >
                     <code className="text-sm font-mono text-foreground">{key}</code>
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                          value === true
-                            ? "bg-success/20 text-success"
-                            : value === false
-                              ? "bg-error/20 text-error"
-                              : "bg-accent/20 text-accent"
-                        }`}
-                      >
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted/15 text-muted">
                         {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
                       </span>
+                      <button
+                        onClick={() => toggleProjectFlag(key, value)}
+                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/15 hover:bg-success/25 text-success"
+                      >
+                        {typeof value === "boolean" ? (value ? "Deactivate" : "Activate") : "Switch"}
+                      </button>
                       {typeof value === "boolean" ? (
                         <button
                           onClick={() => toggleProjectFlag(key, value)}
