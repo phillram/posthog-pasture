@@ -330,39 +330,18 @@ export default function FlagsPage() {
                 {allFlags.map(([key, value]) => (
                   <div
                     key={key}
-                    className="flex items-center justify-between px-4 py-2.5 bg-input-bg border border-border rounded-lg"
+                    className="grid grid-cols-[1fr_6rem_6rem] items-center gap-4 px-4 py-2.5 bg-input-bg border border-border rounded-lg"
                   >
-                    <code className="text-sm font-mono text-foreground">{key}</code>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted/15 text-muted">
-                        {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
-                      </span>
-                      <button
-                        onClick={() => toggleProjectFlag(key, value)}
-                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/15 hover:bg-success/25 text-success"
-                      >
-                        {typeof value === "boolean" ? (value ? "Deactivate" : "Activate") : "Switch"}
-                      </button>
-                      {typeof value === "boolean" ? (
-                        <button
-                          onClick={() => toggleProjectFlag(key, value)}
-                          className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                            value
-                              ? "bg-success/20 hover:bg-success/30 text-success"
-                              : "bg-success hover:bg-success-hover text-white"
-                          }`}
-                        >
-                          {value ? "Deactivate" : "Activate"}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => toggleProjectFlag(key, value)}
-                          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors bg-success/20 hover:bg-success/30 text-success"
-                        >
-                          Switch
-                        </button>
-                      )}
-                    </div>
+                    <code className="text-sm font-mono text-foreground truncate">{key}</code>
+                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted/15 text-muted text-center truncate">
+                      {value === true ? "Enabled" : value === false ? "Disabled" : String(value)}
+                    </span>
+                    <button
+                      onClick={() => toggleProjectFlag(key, value)}
+                      className="text-xs font-medium px-3 py-1 rounded-lg transition-colors bg-success/15 hover:bg-success/25 text-success"
+                    >
+                      {typeof value === "boolean" ? (value ? "Deactivate" : "Activate") : "Switch"}
+                    </button>
                   </div>
                 ))}
               </div>
