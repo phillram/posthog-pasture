@@ -67,7 +67,9 @@ The main workspace. Two sections:
 
 ### Identify
 
-Manage who you are to PostHog. Identify the current user with a distinct ID and properties, reset back to anonymous, associate the user with a group (e.g. company or project), check the groups currently set, and set person properties on the fly without re-identifying.
+A **Your PostHog Profile** panel at the top shows the distinct ID, device ID, and session ID currently used by posthog-js, whether you're identified or anonymous, your active groups, and any properties stored locally by the SDK. A **Refresh** button re-reads everything from posthog-js so you can see changes immediately after identifying, grouping, or resetting.
+
+Below the profile, manage who you are to PostHog: identify the current user with a distinct ID and properties, reset back to anonymous, associate the user with a group (e.g. company or project), check the groups currently set, and set person properties on the fly without re-identifying.
 
 ### Events
 

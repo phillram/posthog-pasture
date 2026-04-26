@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -8,6 +8,15 @@ import Navbar from "@/components/Navbar";
 import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
+
+interface PosthogProfile {
+  distinctId: string | null;
+  deviceId: string | null;
+  sessionId: string | null;
+  isIdentified: boolean;
+  groups: Record<string, unknown>;
+  storedProperties: Record<string, unknown>;
+}
 
 export default function IdentifyPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,11 +34,44 @@ export default function IdentifyPage() {
 
   const [activeGroups, setActiveGroups] = useState<Record<string, unknown> | null>(null);
 
+  const [profile, setProfile] = useState<PosthogProfile | null>(null);
+
+  const refreshProfile = useCallback(async () => {
+    if (!isInitialized) return;
+    const ph = (await import("posthog-js")).default;
+    const distinctId = ph.get_distinct_id();
+    const deviceId = (ph.get_property("$device_id") as string | null) ?? null;
+    const sessionId = ph.get_session_id?.() ?? null;
+    const groups = ph.getGroups() as Record<string, unknown>;
+    // posthog.persistence.props is the local SDK store of registered super
+    // properties — the closest the client has to "what PostHog knows about me"
+    // without an authenticated server-side fetch. Filter out internal keys
+    // (those starting with "$") so the panel reads as user-set state.
+    const persistence = (ph as unknown as { persistence?: { props?: Record<string, unknown> } }).persistence;
+    const allProps = persistence?.props ?? {};
+    const storedProperties: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(allProps)) {
+      if (!k.startsWith("$") && k !== "distinct_id") storedProperties[k] = v;
+    }
+    setProfile({
+      distinctId,
+      deviceId,
+      sessionId,
+      isIdentified: !!distinctId && !!deviceId && distinctId !== deviceId,
+      groups,
+      storedProperties,
+    });
+  }, [isInitialized]);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
   }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    if (isInitialized) refreshProfile();
+  }, [isInitialized, refreshProfile]);
 
   if (isLoading || !isAuthenticated) return null;
 
@@ -86,6 +128,86 @@ export default function IdentifyPage() {
             </button>
           </div>
         )}
+
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-6 bg-accent rounded-full" />
+              <h2 className="text-lg font-semibold text-foreground">Your PostHog Profile</h2>
+            </div>
+            <button
+              onClick={() => {
+                refreshProfile();
+                showToast("Profile refreshed", "info");
+              }}
+              disabled={!isInitialized}
+              className="py-2 px-4 bg-accent/20 hover:bg-accent/30 text-accent font-medium rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Re-read identity, groups, and stored properties from posthog-js"
+            >
+              ↻ Refresh
+            </button>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-6 space-y-5">
+            {!isInitialized ? (
+              <p className="text-muted text-sm">Connect PostHog to view your profile.</p>
+            ) : !profile ? (
+              <p className="text-muted text-sm">Loading profile…</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Distinct ID</p>
+                    <p className="text-sm font-mono text-foreground break-all">{profile.distinctId ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Device ID</p>
+                    <p className="text-sm font-mono text-foreground break-all">{profile.deviceId ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Session ID</p>
+                    <p className="text-sm font-mono text-foreground break-all">{profile.sessionId ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Status</p>
+                    <p
+                      className={`text-sm font-medium ${profile.isIdentified ? "text-accent" : "text-muted"}`}
+                    >
+                      {profile.isIdentified ? "Identified" : "Anonymous"}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Groups</p>
+                  {Object.keys(profile.groups).length === 0 ? (
+                    <p className="text-sm text-muted">No groups set.</p>
+                  ) : (
+                    <pre className="bg-input-bg border border-border rounded-lg p-3 text-xs font-mono text-foreground/80 overflow-x-auto">
+                      {JSON.stringify(profile.groups, null, 2)}
+                    </pre>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+                    Stored properties
+                  </p>
+                  {Object.keys(profile.storedProperties).length === 0 ? (
+                    <p className="text-sm text-muted">
+                      No locally-stored properties. Person properties set via{" "}
+                      <code className="bg-input-bg px-1 rounded">setPersonProperties</code> are sent to PostHog
+                      and are not readable from the browser.
+                    </p>
+                  ) : (
+                    <pre className="bg-input-bg border border-border rounded-lg p-3 text-xs font-mono text-foreground/80 overflow-x-auto">
+                      {JSON.stringify(profile.storedProperties, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
 
         <section>
           <div className="flex items-center gap-3 mb-4">
