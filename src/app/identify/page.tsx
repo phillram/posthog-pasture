@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -18,21 +18,36 @@ interface PosthogProfile {
   storedProperties: Record<string, unknown>;
 }
 
+const PROFILE_FIELDS: { key: keyof PosthogProfile; label: string }[] = [
+  { key: "distinctId", label: "Distinct ID" },
+  { key: "deviceId", label: "Device ID" },
+  { key: "sessionId", label: "Session ID" },
+];
+
 export default function IdentifyPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { isInitialized, identifyUser, resetPerson, setPersonProperties, groupIdentify, addLog } = usePosthog();
+  const {
+    isInitialized,
+    identifyUser,
+    resetPerson,
+    setPersonProperties,
+    groupIdentify,
+    lastRequestError,
+  } = usePosthog();
   const router = useRouter();
   const { toasts, showToast } = useToast();
 
   const [identifyId, setIdentifyId] = useState("");
-  const [identifyProps, setIdentifyProps] = useState('{"plan": "premium"}');
 
-  const [groupType, setGroupType] = useState("company");
+  const [groupType, setGroupType] = useState("pasture");
   const [groupKey, setGroupKey] = useState("");
 
-  const [personProps, setPersonProps] = useState('{"favorite_color": "orange"}');
+  const [personProps, setPersonProps] = useState(
+    '{"favorite_hedgehog": "max", "pasture_size": "large", "plan": "pro"}'
+  );
 
-  const [activeGroups, setActiveGroups] = useState<Record<string, unknown> | null>(null);
+  const [groupError, setGroupError] = useState<{ status: number; message: string } | null>(null);
+  const groupSubmitAtRef = useRef<number>(0);
 
   const [profile, setProfile] = useState<PosthogProfile | null>(null);
 
@@ -73,37 +88,51 @@ export default function IdentifyPage() {
     if (isInitialized) refreshProfile();
   }, [isInitialized, refreshProfile]);
 
+  // If a request error fires within 3s of submitting Group Identify, surface
+  // it inline. Other request errors (e.g. failed captures from other pages)
+  // are intentionally ignored here — the event log already shows them.
+  useEffect(() => {
+    if (!lastRequestError) return;
+    if (lastRequestError.at < groupSubmitAtRef.current) return;
+    if (lastRequestError.at - groupSubmitAtRef.current > 3000) return;
+    setGroupError({ status: lastRequestError.status, message: lastRequestError.message });
+  }, [lastRequestError]);
+
   if (isLoading || !isAuthenticated) return null;
 
   const handleIdentify = () => {
     if (!identifyId.trim()) return;
-    let props: Record<string, unknown> | undefined;
-    if (identifyProps.trim()) {
-      try {
-        props = JSON.parse(identifyProps);
-      } catch {
-        showToast("Invalid JSON in properties", "error");
-        return;
-      }
-    }
-    identifyUser(identifyId.trim(), props);
+    identifyUser(identifyId.trim());
     showToast(`Identified as "${identifyId.trim()}"`);
+    refreshProfile();
+  };
+
+  const handleReset = () => {
+    resetPerson();
+    showToast("Person reset", "info");
+    refreshProfile();
   };
 
   const handleGroupIdentify = () => {
     if (!groupType.trim() || !groupKey.trim()) return;
+    setGroupError(null);
+    groupSubmitAtRef.current = Date.now();
     groupIdentify(groupType.trim(), groupKey.trim());
     showToast(`Group "${groupType.trim()}/${groupKey.trim()}" set`);
+    refreshProfile();
   };
 
   const handlePersonProps = () => {
+    let props: Record<string, unknown>;
     try {
-      const props = JSON.parse(personProps);
-      setPersonProperties(props);
-      showToast("Person properties updated");
+      props = JSON.parse(personProps);
     } catch {
       showToast("Invalid JSON", "error");
+      return;
     }
+    setPersonProperties(props);
+    showToast("Person properties updated");
+    refreshProfile();
   };
 
   return (
@@ -154,21 +183,21 @@ export default function IdentifyPage() {
               <p className="text-muted text-sm">Loading profile…</p>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Distinct ID</p>
-                    <p className="text-sm font-mono text-foreground break-all">{profile.distinctId ?? "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Device ID</p>
-                    <p className="text-sm font-mono text-foreground break-all">{profile.deviceId ?? "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Session ID</p>
-                    <p className="text-sm font-mono text-foreground break-all">{profile.sessionId ?? "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Status</p>
+                <div className="space-y-2">
+                  {PROFILE_FIELDS.map(({ key, label }) => (
+                    <div key={key} className="flex items-center gap-4">
+                      <p className="text-xs font-semibold text-muted uppercase tracking-wide w-28 shrink-0">
+                        {label}
+                      </p>
+                      <p className="text-sm font-mono text-foreground whitespace-nowrap overflow-x-auto flex-1">
+                        {(profile[key] as string | null) ?? "—"}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-4">
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wide w-28 shrink-0">
+                      Status
+                    </p>
                     <p
                       className={`text-sm font-medium ${profile.isIdentified ? "text-accent" : "text-muted"}`}
                     >
@@ -219,20 +248,15 @@ export default function IdentifyPage() {
             <div className="bg-card border border-border rounded-xl p-6">
               <h3 className="text-base font-semibold text-foreground mb-3">Identify User</h3>
               <p className="text-muted text-xs mb-3">
-                Link the current anonymous user to a distinct ID with properties.
+                Link the current anonymous user to a distinct ID. Use the Person Properties card to attach
+                properties.
               </p>
               <div className="space-y-3">
                 <input
                   type="text"
                   value={identifyId}
                   onChange={(e) => setIdentifyId(e.target.value)}
-                  placeholder="user_distinct_id"
-                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
-                />
-                <textarea
-                  value={identifyProps}
-                  onChange={(e) => setIdentifyProps(e.target.value)}
-                  rows={2}
+                  placeholder="shepherd_alex"
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
                 />
                 <div className="flex gap-2">
@@ -243,10 +267,7 @@ export default function IdentifyPage() {
                     Identify
                   </button>
                   <button
-                    onClick={() => {
-                      resetPerson();
-                      showToast("Person reset", "info");
-                    }}
+                    onClick={handleReset}
                     className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
                   >
                     Reset
@@ -259,7 +280,7 @@ export default function IdentifyPage() {
             <div className="bg-card border border-border rounded-xl p-6">
               <h3 className="text-base font-semibold text-foreground mb-3">Group Identify</h3>
               <p className="text-muted text-xs mb-3">
-                Associate the current user with a group (company, project, etc).
+                Associate the current user with a group (e.g. pasture or company).
               </p>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
@@ -274,57 +295,35 @@ export default function IdentifyPage() {
                     type="text"
                     value={groupKey}
                     onChange={(e) => setGroupKey(e.target.value)}
-                    placeholder="Group key"
+                    placeholder="sunny_meadow"
                     className="px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleGroupIdentify}
-                    className="flex-1 py-2.5 px-4 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
-                  >
-                    Group Identify
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const ph = (await import("posthog-js")).default;
-                      const groups = ph.getGroups();
-                      setActiveGroups(groups as Record<string, unknown>);
-                      addLog({
-                        type: "group",
-                        name: "Current Groups Viewed",
-                        properties: groups as Record<string, unknown>,
-                      });
-                      showToast(
-                        Object.keys(groups).length > 0
-                          ? `${Object.keys(groups).length} group(s) found`
-                          : "No groups set"
-                      );
-                    }}
-                    className="py-2.5 px-4 bg-accent/20 hover:bg-accent/30 text-accent font-medium rounded-lg transition-colors text-sm"
-                    title="Show current group associations"
-                  >
-                    Check
-                  </button>
-                </div>
-                {activeGroups && (
-                  <div className="bg-input-bg border border-border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-muted">Current Groups</p>
+                <button
+                  onClick={handleGroupIdentify}
+                  className="w-full py-2.5 px-4 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
+                >
+                  Group Identify
+                </button>
+                {groupError && (
+                  <div className="bg-error/10 border border-error/30 rounded-lg p-3 text-error text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold mb-1">
+                          Group identify failed{groupError.status ? ` (${groupError.status})` : ""}
+                        </p>
+                        <p className="font-mono break-words">{groupError.message}</p>
+                        <p className="text-error/80 mt-2">
+                          Group analytics may not be available on your current PostHog plan.
+                        </p>
+                      </div>
                       <button
-                        onClick={() => setActiveGroups(null)}
-                        className="text-xs text-muted hover:text-foreground transition-colors"
+                        onClick={() => setGroupError(null)}
+                        className="text-error/70 hover:text-error transition-colors shrink-0"
                       >
                         Dismiss
                       </button>
                     </div>
-                    {Object.keys(activeGroups).length > 0 ? (
-                      <pre className="text-xs font-mono text-foreground/80 overflow-x-auto">
-                        {JSON.stringify(activeGroups, null, 2)}
-                      </pre>
-                    ) : (
-                      <p className="text-xs text-muted">No groups currently set.</p>
-                    )}
                   </div>
                 )}
               </div>

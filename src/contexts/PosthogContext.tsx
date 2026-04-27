@@ -45,6 +45,8 @@ interface PosthogContextType {
   stopSessionRecording: () => void;
   isRecording: boolean;
   addLog: (entry: { type: EventLogEntry["type"]; name: string; properties?: Record<string, unknown> }) => void;
+  lastRequestError: { status: number; message: string; at: number } | null;
+  clearRequestError: () => void;
 }
 
 interface EventLogEntry {
@@ -74,6 +76,11 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean | string>>({});
   const [flagsReady, setFlagsReady] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [lastRequestError, setLastRequestError] = useState<{
+    status: number;
+    message: string;
+    at: number;
+  } | null>(null);
   const initRef = useRef(false);
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
@@ -103,6 +110,10 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       capture_pageleave: cfg.capturePageleave,
       debug: true,
       disable_session_recording: cfg.disableSessionRecording,
+      // Always create a person profile so setPersonProperties propagates even
+      // before identify() — otherwise the default 'identified_only' silently
+      // drops $set events on anonymous sessions.
+      person_profiles: "always",
       // This is a sandbox — flush events as fast as the SDK allows (minimum 250ms)
       // so captures show up in PostHog's UI with minimal delay. Default is 3s.
       request_queue_config: { flush_interval_ms: 250 },
@@ -122,6 +133,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
           name: `PostHog request failed${status ? ` (${status})` : ""}`,
           properties: { status, message },
         });
+        setLastRequestError({ status, message, at: Date.now() });
       },
       loaded: (ph) => {
         ph.onFeatureFlags(() => {
@@ -378,6 +390,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     addLog({ type: "recording", name: "Session Recording Stopped" });
   }, [isInitialized, addLog]);
 
+  const clearRequestError = useCallback(() => setLastRequestError(null), []);
+
   return (
     <PosthogContext.Provider
       value={{
@@ -407,6 +421,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         stopSessionRecording,
         isRecording,
         addLog,
+        lastRequestError,
+        clearRequestError,
       }}
     >
       {children}
