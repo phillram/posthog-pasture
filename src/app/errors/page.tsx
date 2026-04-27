@@ -9,16 +9,27 @@ import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
 
+const QUICK_FIRE_ERRORS = [
+  { type: "TypeError", message: "Cannot read properties of null (reading 'id')", source: "lib/user.ts", lineno: 88 },
+  { type: "ReferenceError", message: "fetchUser is not defined", source: "pages/profile.tsx", lineno: 14 },
+  { type: "RangeError", message: "Maximum call stack size exceeded", source: "utils/recurse.ts", lineno: 7 },
+  { type: "NetworkError", message: "Failed to fetch: 503 Service Unavailable", source: "api/client.ts", lineno: 132 },
+  { type: "SyntaxError", message: "Unexpected token '}' in JSON at position 47", source: "utils/parseConfig.ts", lineno: 23 },
+];
+
 export default function ErrorsPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const { isInitialized, captureException } = usePosthog();
   const router = useRouter();
 
-  const [exceptionMessage, setExceptionMessage] = useState("Cannot read properties of undefined (reading 'map')");
+  const [exceptionMessage, setExceptionMessage] = useState("Cannot read properties of undefined (reading 'spikes')");
   const [exceptionType, setExceptionType] = useState("TypeError");
-  const [exceptionSource, setExceptionSource] = useState("components/UserList.tsx");
+  const [exceptionSource, setExceptionSource] = useState("components/HedgehogBurrow.tsx");
   const [exceptionLineNo, setExceptionLineNo] = useState("42");
   const [throwReal, setThrowReal] = useState(false);
+
+  const [quickFireCount, setQuickFireCount] = useState(1);
+  const [quickFireSelection, setQuickFireSelection] = useState("random");
 
   const { toasts, showToast } = useToast();
 
@@ -69,6 +80,27 @@ export default function ErrorsPage() {
     showToast(`Exception "${exceptionType}: ${exceptionMessage.slice(0, 40)}" sent`, "error");
   };
 
+  const handleQuickFire = () => {
+    if (!isInitialized) return;
+    const n = Math.max(1, Math.min(20, quickFireCount || 1));
+    let lastType = "";
+    for (let i = 0; i < n; i++) {
+      const err =
+        quickFireSelection === "random"
+          ? QUICK_FIRE_ERRORS[Math.floor(Math.random() * QUICK_FIRE_ERRORS.length)]
+          : QUICK_FIRE_ERRORS[parseInt(quickFireSelection)];
+      lastType = err.type;
+      captureException({
+        message: err.message,
+        type: err.type,
+        source: err.source,
+        lineno: err.lineno,
+      });
+    }
+    const label = quickFireSelection === "random" ? "random" : lastType;
+    showToast(`Fired ${n} ${label} exception${n === 1 ? "" : "s"}`, "error");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -117,7 +149,7 @@ export default function ErrorsPage() {
                 type="text"
                 value={exceptionMessage}
                 onChange={(e) => setExceptionMessage(e.target.value)}
-                placeholder="Error message"
+                placeholder="Cannot read properties of undefined (reading 'spikes')"
                 className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
               />
               <div className="grid grid-cols-2 gap-2">
@@ -157,7 +189,7 @@ export default function ErrorsPage() {
                   type="text"
                   value={exceptionSource}
                   onChange={(e) => setExceptionSource(e.target.value)}
-                  placeholder="components/UserList.tsx"
+                  placeholder="components/HedgehogBurrow.tsx"
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
                 />
               </div>
@@ -181,6 +213,55 @@ export default function ErrorsPage() {
                 className="w-full py-2.5 px-4 bg-error hover:bg-error-hover text-white font-medium rounded-lg transition-colors text-sm"
               >
                 Capture Exception
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-1 h-6 bg-error rounded-full" />
+            <h2 className="text-lg font-semibold text-foreground">Quick Fire Errors</h2>
+          </div>
+          <div className="bg-card border border-error/30 rounded-xl p-6">
+            <div className="mb-3">
+              <h3 className="text-base font-semibold text-foreground">Fire a batch of varied exceptions</h3>
+              <p className="text-muted text-xs mt-1">
+                Pick a count and an error (or Random for a mix) to fire multiple exceptions in one click.
+              </p>
+            </div>
+            <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-end">
+              <div>
+                <label className="text-xs text-muted mb-1 block">Count</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={quickFireCount}
+                  onChange={(e) => setQuickFireCount(parseInt(e.target.value) || 1)}
+                  className="w-full px-3 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted mb-1 block">Error</label>
+                <select
+                  value={quickFireSelection}
+                  onChange={(e) => setQuickFireSelection(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground text-sm"
+                >
+                  <option value="random">Random</option>
+                  {QUICK_FIRE_ERRORS.map((err, i) => (
+                    <option key={i} value={String(i)}>
+                      {err.type} — {err.message.length > 50 ? err.message.slice(0, 50) + "…" : err.message}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={handleQuickFire}
+                className="py-2.5 px-4 bg-error hover:bg-error-hover text-white font-medium rounded-lg transition-colors text-sm"
+              >
+                Fire
               </button>
             </div>
           </div>

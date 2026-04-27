@@ -80,7 +80,7 @@ Two sections:
 
 ### Errors
 
-Build and capture custom exceptions. Pick a message, error type, source file, and line number — or flip **"Throw real JS error"** on to send a genuine stack trace. A **Quick Trigger Error** button sends a one-click test exception.
+Build and capture custom exceptions. Pick a message, error type, source file, and line number — or flip **"Throw real JS error"** on to send a genuine stack trace. A **Quick Trigger Error** button sends a one-click test exception. The **Quick Fire Errors** panel lets you fire a chosen preset (or a random mix) multiple times in one go using a count selector.
 
 ### Flags
 
