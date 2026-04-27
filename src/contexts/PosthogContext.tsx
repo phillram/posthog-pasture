@@ -16,6 +16,7 @@ interface PosthogContextType {
   config: PosthogConfig;
   isInitialized: boolean;
   eventLog: EventLogEntry[];
+  localPersonProperties: Record<string, unknown>;
   initPosthog: (apiKey: string, apiHost?: string) => void;
   updateConfig: (updates: Partial<PosthogConfig>) => void;
   resetConfig: () => void;
@@ -72,6 +73,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<PosthogConfig>(defaultConfig);
   const [isInitialized, setIsInitialized] = useState(false);
   const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
+  const [localPersonProperties, setLocalPersonProperties] = useState<Record<string, unknown>>({});
   const [isOptedOut, setIsOptedOut] = useState(false);
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean | string>>({});
   const [flagsReady, setFlagsReady] = useState(false);
@@ -165,6 +167,20 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Load locally-tracked person properties on mount. These are tracked by us
+  // (not posthog-js) so we can echo them back in the UI — posthog.setPersonProperties
+  // sends $set events but does not persist the values where the client can read them.
+  useEffect(() => {
+    const saved = localStorage.getItem("posthog_pasture_person_props");
+    if (!saved) return;
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocalPersonProperties(JSON.parse(saved));
+    } catch {
+      localStorage.removeItem("posthog_pasture_person_props");
+    }
+  }, []);
+
   // Load config from localStorage on mount. This is a client-only read, so it
   // must happen in an effect to stay SSR-safe. The react-hooks/set-state-in-effect
   // rule flags this pattern but it's correct here.
@@ -246,7 +262,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     setIsInitialized(false);
     setFlagsReady(false);
     setFeatureFlags({});
+    setLocalPersonProperties({});
     localStorage.removeItem("posthog_config");
+    localStorage.removeItem("posthog_pasture_person_props");
     addLog({ type: "config", name: "Config Reset" });
   }, [addLog]);
 
@@ -294,6 +312,13 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     (userId: string, properties?: Record<string, unknown>) => {
       if (!isInitialized) return;
       posthog.identify(userId, properties);
+      if (properties && Object.keys(properties).length > 0) {
+        setLocalPersonProperties((prev) => {
+          const merged = { ...prev, ...properties };
+          localStorage.setItem("posthog_pasture_person_props", JSON.stringify(merged));
+          return merged;
+        });
+      }
       addLog({ type: "identify", name: `Identified: ${userId}`, properties });
     },
     [isInitialized, addLog]
@@ -302,6 +327,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const resetPerson = useCallback(() => {
     if (!isInitialized) return;
     posthog.reset();
+    setLocalPersonProperties({});
+    localStorage.removeItem("posthog_pasture_person_props");
     addLog({ type: "person", name: "Person Reset" });
   }, [isInitialized, addLog]);
 
@@ -309,6 +336,11 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     (properties: Record<string, unknown>) => {
       if (!isInitialized) return;
       posthog.setPersonProperties(properties);
+      setLocalPersonProperties((prev) => {
+        const merged = { ...prev, ...properties };
+        localStorage.setItem("posthog_pasture_person_props", JSON.stringify(merged));
+        return merged;
+      });
       addLog({ type: "person", name: "Person Properties Set", properties });
     },
     [isInitialized, addLog]
@@ -398,6 +430,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         config,
         isInitialized,
         eventLog,
+        localPersonProperties,
         initPosthog,
         updateConfig,
         resetConfig,
