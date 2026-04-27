@@ -43,7 +43,7 @@ export default function IdentifyPage() {
   const [groupKey, setGroupKey] = useState("");
 
   const [personProps, setPersonProps] = useState(
-    '{"favorite_hedgehog": "max", "pasture_size": "large", "plan": "pro"}'
+    '{\n    "favorite_hedgehog": "max",\n    "pasture_size": "large",\n    "spines": "9001"\n}'
   );
 
   const [groupError, setGroupError] = useState<{ status: number; message: string } | null>(null);
@@ -256,7 +256,7 @@ export default function IdentifyPage() {
                   type="text"
                   value={identifyId}
                   onChange={(e) => setIdentifyId(e.target.value)}
-                  placeholder="shepherd_alex"
+                  placeholder="hoglet"
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
                 />
                 <div className="flex gap-2">
@@ -339,7 +339,7 @@ export default function IdentifyPage() {
                 <textarea
                   value={personProps}
                   onChange={(e) => setPersonProps(e.target.value)}
-                  rows={3}
+                  rows={6}
                   className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
                 />
                 <button
