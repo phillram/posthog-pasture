@@ -67,7 +67,7 @@ The main workspace. Two sections:
 
 ### Identify
 
-A **Your PostHog Profile** panel at the top shows the distinct ID, device ID, and session ID currently used by posthog-js — each on its own single line so the full value is always visible — along with whether you're identified or anonymous, your active groups, and any properties stored locally by the SDK. A **Refresh** button re-reads everything from posthog-js, and the panel also auto-refreshes whenever you submit one of the cards below.
+A **Your PostHog Profile** panel at the top shows the distinct ID, device ID, and session ID currently used by posthog-js — each on its own single line so the full value is always visible — along with whether you're identified or anonymous, your active groups, the person properties you've set on yourself, and any super properties stored locally by the SDK. The Groups, Person properties, and Stored super properties sections are collapsible and auto-collapse when they have more than five entries. A **Refresh** button re-reads everything from posthog-js, and the panel also auto-refreshes whenever you submit one of the cards below.
 
 Below the profile, manage who you are to PostHog: identify the current user with a distinct ID, reset back to anonymous, associate the user with a group (e.g. pasture or company), and set person properties on the fly. If your PostHog plan doesn't include group analytics, the **Group Identify** card surfaces the server's error inline.
 

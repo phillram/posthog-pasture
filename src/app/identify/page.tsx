@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -24,6 +24,49 @@ const PROFILE_FIELDS: { key: keyof PosthogProfile; label: string }[] = [
   { key: "sessionId", label: "Session ID" },
 ];
 
+function CollapsibleProfileBlock({
+  title,
+  data,
+  emptyMessage,
+}: {
+  title: string;
+  data: Record<string, unknown>;
+  emptyMessage: ReactNode;
+}) {
+  const keyCount = Object.keys(data).length;
+  // Auto-collapse when more than 5 rows. The user can override either way; once
+  // they've toggled, we respect their choice instead of re-deriving from the data.
+  const [override, setOverride] = useState<boolean | null>(null);
+  const isOpen = override ?? keyCount <= 5;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOverride(!isOpen)}
+        className="flex items-center gap-2 mb-2 text-left w-full hover:opacity-80 transition-opacity"
+        aria-expanded={isOpen}
+      >
+        <span className="text-muted text-xs w-3 inline-block">{isOpen ? "▾" : "▸"}</span>
+        <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+          {title}
+          {keyCount > 0 && (
+            <span className="ml-2 normal-case font-normal text-muted/70">({keyCount})</span>
+          )}
+        </span>
+      </button>
+      {isOpen && (
+        keyCount === 0 ? (
+          <div className="text-sm text-muted pl-5">{emptyMessage}</div>
+        ) : (
+          <pre className="bg-input-bg border border-border rounded-lg p-3 text-xs font-mono text-foreground/80 overflow-x-auto">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        )
+      )}
+    </div>
+  );
+}
+
 export default function IdentifyPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const {
@@ -33,6 +76,7 @@ export default function IdentifyPage() {
     setPersonProperties,
     groupIdentify,
     lastRequestError,
+    localPersonProperties,
   } = usePosthog();
   const router = useRouter();
   const { toasts, showToast } = useToast();
@@ -206,33 +250,33 @@ export default function IdentifyPage() {
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Groups</p>
-                  {Object.keys(profile.groups).length === 0 ? (
-                    <p className="text-sm text-muted">No groups set.</p>
-                  ) : (
-                    <pre className="bg-input-bg border border-border rounded-lg p-3 text-xs font-mono text-foreground/80 overflow-x-auto">
-                      {JSON.stringify(profile.groups, null, 2)}
-                    </pre>
-                  )}
-                </div>
+                <CollapsibleProfileBlock
+                  title="Groups"
+                  data={profile.groups}
+                  emptyMessage="No groups set."
+                />
 
-                <div>
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-                    Stored properties
-                  </p>
-                  {Object.keys(profile.storedProperties).length === 0 ? (
-                    <p className="text-sm text-muted">
-                      No locally-stored properties. Person properties set via{" "}
-                      <code className="bg-input-bg px-1 rounded">setPersonProperties</code> are sent to PostHog
-                      and are not readable from the browser.
-                    </p>
-                  ) : (
-                    <pre className="bg-input-bg border border-border rounded-lg p-3 text-xs font-mono text-foreground/80 overflow-x-auto">
-                      {JSON.stringify(profile.storedProperties, null, 2)}
-                    </pre>
-                  )}
-                </div>
+                <CollapsibleProfileBlock
+                  title="Person properties"
+                  data={localPersonProperties}
+                  emptyMessage={
+                    <>
+                      None set yet. Use the <span className="font-semibold">Person Properties</span> card
+                      below to send some.
+                    </>
+                  }
+                />
+
+                <CollapsibleProfileBlock
+                  title="Stored super properties"
+                  data={profile.storedProperties}
+                  emptyMessage={
+                    <>
+                      No super properties registered. These are set via{" "}
+                      <code className="bg-input-bg px-1 rounded">register</code> on the Events page.
+                    </>
+                  }
+                />
               </>
             )}
           </div>
