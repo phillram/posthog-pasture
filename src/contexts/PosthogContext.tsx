@@ -86,8 +86,14 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const initRef = useRef(false);
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
+  // Watchdog for the initial /flags request — posthog-js's on_request_error
+  // only fires on HTTP >= 400, so silent network failures (ad blockers, CORS,
+  // offline) leave us with no visible error. If flags don't arrive in time,
+  // we surface that as an event-log error ourselves.
+  const flagsWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const MAX_LOG_ENTRIES = 100;
+  const FLAGS_LOAD_TIMEOUT_MS = 8000;
 
   const addLog = useCallback((entry: Omit<EventLogEntry, "id" | "timestamp">) => {
     setEventLog((prev) => [
@@ -153,6 +159,10 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
           }
           setFeatureFlags(flags as Record<string, boolean | string>);
           setFlagsReady(true);
+          if (flagsWatchdogRef.current) {
+            clearTimeout(flagsWatchdogRef.current);
+            flagsWatchdogRef.current = null;
+          }
           addLogRef.current({
             type: "flag",
             name: "Feature Flags Ready",
@@ -162,6 +172,18 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       },
     });
     initRef.current = true;
+    if (flagsWatchdogRef.current) clearTimeout(flagsWatchdogRef.current);
+    flagsWatchdogRef.current = setTimeout(() => {
+      flagsWatchdogRef.current = null;
+      const message =
+        "Feature flags didn't load — likely blocked by an ad blocker, CORS, or network error. Check the browser DevTools Network tab for the /flags request.";
+      addLogRef.current({
+        type: "error",
+        name: "Feature flags request failed silently",
+        properties: { status: 0, message, host: cfg.apiHost },
+      });
+      setLastRequestError({ status: 0, message, at: Date.now() });
+    }, FLAGS_LOAD_TIMEOUT_MS);
     if (typeof window !== "undefined") {
       (window as unknown as Record<string, unknown>).posthog = posthog;
     }
@@ -257,6 +279,10 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     if (initRef.current) {
       posthog.reset();
       initRef.current = false;
+    }
+    if (flagsWatchdogRef.current) {
+      clearTimeout(flagsWatchdogRef.current);
+      flagsWatchdogRef.current = null;
     }
     setConfig(defaultConfig);
     setIsInitialized(false);
