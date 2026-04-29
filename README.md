@@ -98,6 +98,8 @@ All project flags are also listed with their current values. You can activate / 
 
 Any flag whose value you've changed locally is highlighted with a dashed warning-colored outline in both the *Flags Applied to You* and *All Feature Flags on Project* lists, so it's clear at a glance which values came from your project and which you've changed yourself. Hover over a highlighted pill to confirm it's an override. **Clear Overrides** wipes those markers along with the local values.
 
+If the flag list stays empty after a few seconds, the Event Log will show a **Feature flags request failed silently** error — that means the `/flags` request was blocked or never came back. Check your browser's DevTools Network tab for the `/flags` request: an ad blocker or privacy extension is the most common cause.
+
 ### Experiments
 
 A wizard that generates realistic experiment data in your PostHog project using simulated users. Each simulated user gets their own distinct ID so your own session is never affected.
