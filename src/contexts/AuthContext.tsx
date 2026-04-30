@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { identifyUser, captureEvent, resetPerson, reloadFeatureFlagsAndCapture } = usePosthog();
+  const { identifyUser, captureEvent, resetPerson, reloadFeatureFlagsAndCapture, armFlagsReadyLog } = usePosthog();
 
   useEffect(() => {
     // Hydrate from localStorage on mount — this is a client-only read, so it must
@@ -75,6 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
+      // Arm the Event Log so the /flags fetch triggered by identify gets
+      // a "Feature Flags Ready" entry — this is one of the two moments
+      // (login + Reload Flags click) where the user expects to see it.
+      armFlagsReadyLog();
       identifyUser(u.id, { email: u.email, name: u.name });
       captureEvent("pasture_user_logged_in", { method: isEmail ? "email" : "username", username });
       // posthog.identify already triggers a /flags fetch — only re-call when
@@ -84,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return true;
     },
-    [captureEvent, identifyUser, reloadFeatureFlagsAndCapture]
+    [armFlagsReadyLog, captureEvent, identifyUser, reloadFeatureFlagsAndCapture]
   );
 
   // `_password` is intentionally unused — this is a demo registration flow
@@ -100,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
+      armFlagsReadyLog();
       identifyUser(u.id, { email: u.email, name: u.name });
       captureEvent("pasture_user_registered", { method: "email", email, name: username });
       // See login() — identify already fetches flags; only re-call when the
@@ -109,11 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return true;
     },
-    [captureEvent, identifyUser, reloadFeatureFlagsAndCapture]
+    [armFlagsReadyLog, captureEvent, identifyUser, reloadFeatureFlagsAndCapture]
   );
 
   const loginAsGuest = useCallback(
     (applyFeatureFlags = false) => {
+      armFlagsReadyLog();
       resetPerson();
       const guestId = `guest_${Date.now()}`;
       const u: User = {
@@ -132,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         reloadFeatureFlagsAndCapture();
       }
     },
-    [captureEvent, resetPerson, reloadFeatureFlagsAndCapture]
+    [armFlagsReadyLog, captureEvent, resetPerson, reloadFeatureFlagsAndCapture]
   );
 
   const logout = useCallback(() => {
