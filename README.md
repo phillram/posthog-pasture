@@ -2,6 +2,8 @@
 
 An interactive sandbox for exploring and testing [PostHog](https://posthog.com). Connect your PostHog project, fire events, toggle feature flags, trigger surveys, generate experiment data, and inspect everything in real time.
 
+Custom events fired from Pasture all start with **`pasture_`** (e.g. `pasture_purchase`, `pasture_user_logged_in`) so you can easily tell them apart from the rest of your project's events in PostHog.
+
 ## Tech Stack
 
 | Layer     | Technology               |
