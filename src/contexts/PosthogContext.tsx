@@ -157,9 +157,16 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       before_send: (event) => {
         if (event) {
           const e = event.event;
-          // Skip high-frequency telemetry events from the local Event Log so
-          // it stays readable. They're still sent to PostHog as normal.
-          const SKIP_LOG_EVENTS = new Set(["$$heatmap", "$web_vitals", "web_vitals"]);
+          // Skip high-frequency / autocaptured events from the local Event Log
+          // so it stays readable. They're still sent to PostHog as normal.
+          const SKIP_LOG_EVENTS = new Set([
+            "$$heatmap",
+            "$web_vitals",
+            "web_vitals",
+            "$pageview",
+            "$pageleave",
+            "$autocapture",
+          ]);
           if (!SKIP_LOG_EVENTS.has(e)) {
             let type: EventLogEntry["type"] = "event";
             if (e === "$pageview" || e === "$pageleave") type = "pageview";
