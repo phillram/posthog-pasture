@@ -2,8 +2,6 @@
 
 An interactive sandbox for exploring and testing [PostHog](https://posthog.com). Connect your PostHog project, fire events, toggle feature flags, trigger surveys, generate experiment data, and inspect everything in real time.
 
-Every event fired from Pasture is automatically tagged with an **`evaluation_context`** property set to `pasture:<page>` (e.g. `pasture:dashboard`, `pasture:flags`). You can filter on this in PostHog to see exactly which page a given event came from.
-
 ## Tech Stack
 
 | Layer     | Technology               |
@@ -34,9 +32,6 @@ npm run dev
 # Build and start for production
 npm run build
 npm start
-
-# Lint
-npm run lint
 ```
 
 ---
@@ -45,7 +40,7 @@ npm run lint
 
 On first load you land on the **Setup** page. Paste your **Project API Key**, choose your **API host** (US or EU Cloud), and click **Connect & Continue**.
 
-Then log in with any username + password `test`, continue as a guest, or register a new account. Registration and login both have an **"Apply feature flags"** toggle — turn it on if you want flag-evaluation events to fire at login time.
+Then log in with any username + password `test`, continue as a guest, or register a new account. Registration and login both have an **"Apply feature flags"** toggle — turn it on if you want flag evaluations to be logged at login.
 
 > **API Key locations:**
 >
@@ -63,11 +58,11 @@ Each page is themed in its own colour so you can see at a glance which area you'
 The main workspace. Two sections:
 
 - **Quick Events** — one-click buttons that fire common event types (purchase, signup, error, pageview, session recording start/stop, etc.). Hover any button for a tooltip showing what it sends.
-- **Sandboxes** — run arbitrary JavaScript in an expression sandbox, or run any PostHog SDK command directly from an in-page console (with quick-command buttons and a reusable history).
+- **Sandboxes** — run arbitrary JavaScript in an expression sandbox, or run any PostHog SDK command from an in-page console with quick-command buttons and a reusable history.
 
 ### Identify
 
-A **Your PostHog Profile** panel at the top shows the distinct ID, device ID, and session ID currently used by posthog-js — each on its own single line so the full value is always visible — along with whether you're identified or anonymous, your active groups, the person properties you've set on yourself, and any super properties stored locally by the SDK. The Groups, Person properties, and Stored super properties sections are collapsible and auto-collapse when they have more than five entries. A **Refresh** button re-reads everything from posthog-js, and the panel also auto-refreshes whenever you submit one of the cards below.
+A **Your PostHog Profile** panel at the top shows your distinct ID, device ID, and session ID, whether you're identified or anonymous, your active groups, the person properties you've set, and any super properties stored locally. Long sections collapse so the panel stays compact. A **Refresh** button re-reads everything, and the panel also auto-refreshes whenever you submit one of the cards below.
 
 Below the profile, manage who you are to PostHog: identify the current user with a distinct ID, reset back to anonymous, associate the user with a group (e.g. pasture or company), and set person properties on the fly. If your PostHog plan doesn't include group analytics, the **Group Identify** card surfaces the server's error inline.
 
@@ -96,15 +91,15 @@ Three demo flags drive live hedgehog GIF animations — set them up in PostHog t
 
 All project flags are also listed with their current values. You can activate / deactivate boolean flags, switch multivariate variants, reload from the server, or clear all local overrides. Each row also has a **Peek** button that opens the flag in PostHog in a new tab.
 
-Any flag whose value you've changed locally is highlighted with a dashed warning-colored outline in both the *Flags Applied to You* and *All Feature Flags on Project* lists, so it's clear at a glance which values came from your project and which you've changed yourself. Hover over a highlighted pill to confirm it's an override. **Clear Overrides** wipes those markers along with the local values.
+Any flag whose value you've changed locally is highlighted with a dashed warning-coloured outline so it's clear which values came from your project and which you've changed yourself. Hover over a highlighted pill to confirm it's an override. **Clear Overrides** wipes those markers along with the local values.
 
-If the flag list stays empty after a few seconds, the Event Log will show a **Feature flags request failed silently** error — that means the `/flags` request was blocked or never came back. Check your browser's DevTools Network tab for the `/flags` request: an ad blocker or privacy extension is the most common cause.
+If the flag list stays empty after a few seconds, an ad blocker or privacy extension is most likely blocking the request — the Event Log will surface an error explaining what happened.
 
 ### Experiments
 
 A wizard that generates realistic experiment data in your PostHog project using simulated users. Each simulated user gets their own distinct ID so your own session is never affected.
 
-Walk through four steps: pick a feature flag, choose how many simulated users to generate, set a conversion rate, and pick a conversion action. PostHog assigns each user their flag variant, then the wizard fires identification, flag-exposure, and conversion events in the right order.
+Walk through four steps: pick a feature flag, choose how many simulated users to generate, set a conversion rate, and pick a conversion action.
 
 The results view shows totals, conversion rate, a per-variant breakdown, and a table of every simulated user with their assigned variant and conversion status. There's also a direct **"View in PostHog →"** link to the experiments dashboard.
 
@@ -121,9 +116,9 @@ Each survey card shows its name with a coloured status badge (Draft / Scheduled 
 
 ### Event Log
 
-A live feed of PostHog events captured during the session — identifications, person and group properties, exceptions, feature-flag-called events, and any custom events you fire from the app. Each entry shows a colour-coded type badge, timestamp, event name, and a property count. **Every row is collapsed by default — click a row to expand its full JSON properties and click again to collapse it back.** The log is capped at the most recent 100 entries and persists across page navigation and refreshes within the same browser tab. **Feature Flags Ready** is logged once on load instead of on every flag re-evaluation, so override toggles no longer add duplicate entries. To keep the log readable, autocaptured and high-frequency telemetry events (`$autocapture`, `$pageview`, `$pageleave`, `$rageclick`, `$$heatmap`, `$web_vitals`) are kept out of the log — they're still sent to PostHog as normal.
+A live feed of events captured during your session — identifications, person and group properties, exceptions, feature flags, and any custom events you fire from the app. Each entry shows a colour-coded type badge, timestamp, event name, and a property count. Rows start collapsed; click a row to expand its full properties and click again to collapse. The log is capped at the most recent 100 entries and persists across page navigation and refreshes within the same browser tab. Some automatically captured events are kept out of the log to reduce noise — they're still sent to PostHog as normal.
 
-Filter by **type**, search by **name or properties**, export what you see with **Copy JSON** or **Download JSON**, or empty the log with **Clear Log** (with a confirm prompt — only the local log is cleared, events already sent to PostHog are not affected).
+Filter by **type**, search by **name or properties**, export with **Copy JSON** or **Download JSON**, or empty the log with **Clear Log**.
 
 ### Config
 
