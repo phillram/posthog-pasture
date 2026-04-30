@@ -121,7 +121,7 @@ Each survey card shows its name with a coloured status badge (Draft / Scheduled 
 
 ### Event Log
 
-A live feed of every action captured during the session — events, identifications, flag evaluations, config changes, and more. Each entry has a colour-coded type badge, timestamp, event name, and expandable JSON properties. Capped at the most recent 100 entries.
+A live feed of every PostHog event captured during the session — including autocaptured clicks, pageviews and pageleaves, identifications, person and group properties, exceptions, feature-flag-called events, and any custom events you fire from the app. Each entry has a colour-coded type badge, timestamp, event name, and expandable JSON properties. Capped at the most recent 100 entries.
 
 Filter by **type**, search by **name or properties**, and export what you see with **Copy JSON** or **Download JSON**.
 

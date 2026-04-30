@@ -125,6 +125,25 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       // This is a sandbox — flush events as fast as the SDK allows (minimum 250ms)
       // so captures show up in PostHog's UI with minimal delay. Default is 3s.
       request_queue_config: { flush_interval_ms: 250 },
+      // Single source of truth for the local Event Log. Every event the SDK
+      // captures — including autocaptured clicks, $pageview, $pageleave,
+      // $exception, $identify, $set, $feature_flag_called, $autocapture, etc. —
+      // flows through here, so the log mirrors what's actually being sent to
+      // PostHog rather than only the events fired through our wrappers.
+      before_send: (event) => {
+        if (event) {
+          const e = event.event;
+          let type: EventLogEntry["type"] = "event";
+          if (e === "$pageview" || e === "$pageleave") type = "pageview";
+          else if (e === "$exception") type = "error";
+          else if (e === "$identify" || e === "$create_alias") type = "identify";
+          else if (e === "$set" || e === "$set_once") type = "person";
+          else if (e === "$groupidentify") type = "group";
+          else if (e === "$feature_flag_called") type = "flag";
+          addLogRef.current({ type, name: e, properties: event.properties });
+        }
+        return event;
+      },
       // Surface PostHog network failures in the event log + as an error toast
       // (see PosthogProvider useEffect below). This only fires on real errors
       // so it won't spam the log with every capture.
@@ -293,13 +312,16 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     addLog({ type: "config", name: "Config Reset" });
   }, [addLog]);
 
+  // The Event Log entries for these wrappers come from the `before_send` hook
+  // configured in runPosthogInit, so we don't double-log here. That hook is
+  // also the only path that catches autocaptured events ($autocapture,
+  // $pageview, $pageleave, $exception, $set, $feature_flag_called, …).
   const captureEvent = useCallback(
     (eventName: string, properties?: Record<string, unknown>) => {
       if (!isInitialized) return;
       posthog.capture(eventName, properties);
-      addLog({ type: "event", name: eventName, properties });
     },
-    [isInitialized, addLog]
+    [isInitialized]
   );
 
   const captureException = useCallback(
@@ -319,18 +341,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         $exception_source: opts.source || "unknown",
         $exception_lineno: opts.lineno || 0,
       });
-
-      addLog({
-        type: "error",
-        name: `Exception: ${opts.message}`,
-        properties: {
-          $exception_type: exType,
-          $exception_message: opts.message,
-          $exception_source: opts.source || "unknown",
-        },
-      });
     },
-    [isInitialized, addLog]
+    [isInitialized]
   );
 
   const identifyUser = useCallback(
@@ -344,9 +356,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
           return merged;
         });
       }
-      addLog({ type: "identify", name: `Identified: ${userId}`, properties });
     },
-    [isInitialized, addLog]
+    [isInitialized]
   );
 
   const resetPerson = useCallback(() => {
@@ -366,27 +377,24 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("posthog_pasture_person_props", JSON.stringify(merged));
         return merged;
       });
-      addLog({ type: "person", name: "Person Properties Set", properties });
     },
-    [isInitialized, addLog]
+    [isInitialized]
   );
 
   const groupIdentify = useCallback(
     (groupType: string, groupKey: string, properties?: Record<string, unknown>) => {
       if (!isInitialized) return;
       posthog.group(groupType, groupKey, properties);
-      addLog({ type: "group", name: `Group: ${groupType}/${groupKey}`, properties });
     },
-    [isInitialized, addLog]
+    [isInitialized]
   );
 
   const capturePageview = useCallback(
     (url?: string) => {
       if (!isInitialized) return;
       posthog.capture("$pageview", url ? { $current_url: url } : undefined);
-      addLog({ type: "pageview", name: "Pageview", properties: url ? { url } : undefined });
     },
-    [isInitialized, addLog]
+    [isInitialized]
   );
 
   const registerSuperProperties = useCallback(
@@ -409,10 +417,10 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
 
   const optIn = useCallback(() => {
     if (!isInitialized) return;
+    // Fires a $opt_in event which the before_send hook already logs.
     posthog.opt_in_capturing();
     setIsOptedOut(false);
-    addLog({ type: "config", name: "Opted In" });
-  }, [isInitialized, addLog]);
+  }, [isInitialized]);
 
   const optOut = useCallback(() => {
     if (!isInitialized) return;
