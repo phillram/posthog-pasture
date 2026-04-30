@@ -38,7 +38,7 @@ const FLAG_KEYS = ["hog-spin", "hog-dance", "hog-action"] as const;
 
 export default function FlagsPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { featureFlags, flagsReady, reloadFeatureFlags, addLog, isInitialized, config } = usePosthog();
+  const { featureFlags, flagsReady, reloadFeatureFlags, armFlagsReadyLog, addLog, isInitialized, config } = usePosthog();
   const router = useRouter();
 
   const { toasts, showToast } = useToast();
@@ -371,6 +371,7 @@ export default function FlagsPage() {
                 </button>
                 <button
                   onClick={() => {
+                    armFlagsReadyLog();
                     reloadFeatureFlags();
                     showToast("Feature flags reloaded");
                   }}
