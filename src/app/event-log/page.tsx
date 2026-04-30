@@ -38,9 +38,6 @@ const typeBadgeColors: Record<string, string> = {
 
 const TYPE_OPTIONS = ["all", "event", "identify", "pageview", "group", "error", "config", "person", "flag", "recording"] as const;
 
-// Auto-collapse property blobs longer than this so the log stays scannable.
-const COLLAPSE_AFTER_LINES = 10;
-
 interface LogEntry {
   id: string;
   timestamp: Date;
@@ -52,41 +49,46 @@ interface LogEntry {
 function EventLogRow({ entry }: { entry: LogEntry }) {
   const [expanded, setExpanded] = useState(false);
   const hasProps = entry.properties && Object.keys(entry.properties).length > 0;
-  const json = hasProps ? JSON.stringify(entry.properties, null, 2) : "";
-  const lineCount = json ? json.split("\n").length : 0;
-  const isCollapsible = lineCount > COLLAPSE_AFTER_LINES;
-  const displayJson =
-    isCollapsible && !expanded ? json.split("\n").slice(0, COLLAPSE_AFTER_LINES).join("\n") : json;
+  const propCount = hasProps ? Object.keys(entry.properties!).length : 0;
+
+  const toggle = () => {
+    if (hasProps) setExpanded((v) => !v);
+  };
 
   return (
-    <div className="flex items-start gap-3 text-sm border-b border-border/50 pb-2 animate-fade-in">
-      <span className="text-muted text-xs font-mono whitespace-nowrap mt-0.5">
-        {entry.timestamp.toLocaleTimeString()}
-      </span>
-      <span
-        className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${typeBadgeColors[entry.type] || "bg-muted/20 text-muted"}`}
+    <div className="border-b border-border/50 pb-2 animate-fade-in">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={!hasProps}
+        aria-expanded={expanded}
+        className={`flex items-start gap-3 text-sm w-full text-left ${hasProps ? "cursor-pointer hover:bg-input-bg/40 rounded-md px-1 -mx-1" : "cursor-default"}`}
       >
-        {entry.type}
-      </span>
-      <div className="flex-1 min-w-0">
-        <span className={`font-medium ${typeColors[entry.type] || "text-foreground"}`}>{entry.name}</span>
+        <span className={`text-xs mt-0.5 w-3 select-none ${hasProps ? "text-muted" : "text-transparent"}`}>
+          {expanded ? "▾" : "▸"}
+        </span>
+        <span className="text-muted text-xs font-mono whitespace-nowrap mt-0.5">
+          {entry.timestamp.toLocaleTimeString()}
+        </span>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${typeBadgeColors[entry.type] || "bg-muted/20 text-muted"}`}
+        >
+          {entry.type}
+        </span>
+        <span className={`font-medium flex-1 min-w-0 truncate ${typeColors[entry.type] || "text-foreground"}`}>
+          {entry.name}
+        </span>
         {hasProps && (
-          <>
-            <pre className="text-xs text-muted mt-1 font-mono overflow-x-auto">
-              {displayJson}
-              {isCollapsible && !expanded && "\n  …"}
-            </pre>
-            {isCollapsible && (
-              <button
-                onClick={() => setExpanded((v) => !v)}
-                className="text-xs text-primary hover:text-primary-hover font-medium mt-1"
-              >
-                {expanded ? "Collapse" : `Show all ${lineCount} lines`}
-              </button>
-            )}
-          </>
+          <span className="text-xs text-muted whitespace-nowrap">
+            {propCount} {propCount === 1 ? "property" : "properties"}
+          </span>
         )}
-      </div>
+      </button>
+      {hasProps && expanded && (
+        <pre className="text-xs text-muted mt-1 ml-7 font-mono overflow-x-auto">
+          {JSON.stringify(entry.properties, null, 2)}
+        </pre>
+      )}
     </div>
   );
 }
