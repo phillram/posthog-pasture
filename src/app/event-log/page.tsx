@@ -95,7 +95,7 @@ function EventLogRow({ entry }: { entry: LogEntry }) {
 
 export default function EventLogPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { eventLog } = usePosthog();
+  const { eventLog, clearEventLog } = usePosthog();
   const router = useRouter();
 
   const [typeFilter, setTypeFilter] = useState<(typeof TYPE_OPTIONS)[number]>("all");
@@ -158,6 +158,15 @@ export default function EventLogPage() {
     showToast(`Downloaded ${filtered.length} entr${filtered.length === 1 ? "y" : "ies"}`);
   };
 
+  const handleClearLog = () => {
+    if (eventLog.length === 0) return;
+    if (!window.confirm(`Clear all ${eventLog.length} event log entries? This only affects the local log — events already sent to PostHog are not deleted.`)) {
+      return;
+    }
+    clearEventLog();
+    showToast("Event log cleared");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -215,6 +224,14 @@ export default function EventLogPage() {
                   className="py-2.5 px-4 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Download JSON
+                </button>
+                <button
+                  onClick={handleClearLog}
+                  disabled={eventLog.length === 0}
+                  title="Clear the local event log. Events already sent to PostHog are not affected."
+                  className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Clear Log
                 </button>
               </div>
             </div>

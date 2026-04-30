@@ -121,9 +121,9 @@ Each survey card shows its name with a coloured status badge (Draft / Scheduled 
 
 ### Event Log
 
-A live feed of PostHog events captured during the session — identifications, person and group properties, exceptions, feature-flag-called events, and any custom events you fire from the app. Each entry shows a colour-coded type badge, timestamp, event name, and a property count. **Every row is collapsed by default — click a row to expand its full JSON properties and click again to collapse it back.** The log is capped at the most recent 100 entries and persists across page navigation and refreshes within the same browser tab. To keep the log readable, autocaptured and high-frequency telemetry events (`$autocapture`, `$pageview`, `$pageleave`, `$$heatmap`, `$web_vitals`) are kept out of the log — they're still sent to PostHog as normal.
+A live feed of PostHog events captured during the session — identifications, person and group properties, exceptions, feature-flag-called events, and any custom events you fire from the app. Each entry shows a colour-coded type badge, timestamp, event name, and a property count. **Every row is collapsed by default — click a row to expand its full JSON properties and click again to collapse it back.** The log is capped at the most recent 100 entries and persists across page navigation and refreshes within the same browser tab. **Feature Flags Ready** is logged once on load instead of on every flag re-evaluation, so override toggles no longer add duplicate entries. To keep the log readable, autocaptured and high-frequency telemetry events (`$autocapture`, `$pageview`, `$pageleave`, `$rageclick`, `$$heatmap`, `$web_vitals`) are kept out of the log — they're still sent to PostHog as normal.
 
-Filter by **type**, search by **name or properties**, and export what you see with **Copy JSON** or **Download JSON**.
+Filter by **type**, search by **name or properties**, export what you see with **Copy JSON** or **Download JSON**, or empty the log with **Clear Log** (with a confirm prompt — only the local log is cleared, events already sent to PostHog are not affected).
 
 ### Config
 
