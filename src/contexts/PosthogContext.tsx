@@ -94,12 +94,36 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
 
   const MAX_LOG_ENTRIES = 100;
   const FLAGS_LOAD_TIMEOUT_MS = 8000;
+  const EVENT_LOG_STORAGE_KEY = "posthog_pasture_event_log";
+
+  // Hydrate eventLog from sessionStorage on mount so the log survives page
+  // navigation and reloads within the same tab session.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = sessionStorage.getItem(EVENT_LOG_STORAGE_KEY);
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved) as Array<Omit<EventLogEntry, "timestamp"> & { timestamp: string }>;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEventLog(parsed.map((e) => ({ ...e, timestamp: new Date(e.timestamp) })));
+    } catch {
+      sessionStorage.removeItem(EVENT_LOG_STORAGE_KEY);
+    }
+  }, []);
 
   const addLog = useCallback((entry: Omit<EventLogEntry, "id" | "timestamp">) => {
-    setEventLog((prev) => [
-      { ...entry, id: crypto.randomUUID(), timestamp: new Date() },
-      ...prev.slice(0, MAX_LOG_ENTRIES - 1),
-    ]);
+    setEventLog((prev) => {
+      const next = [
+        { ...entry, id: crypto.randomUUID(), timestamp: new Date() },
+        ...prev.slice(0, MAX_LOG_ENTRIES - 1),
+      ];
+      try {
+        sessionStorage.setItem(EVENT_LOG_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore quota / disabled-storage errors — in-memory state is still the source of truth
+      }
+      return next;
+    });
   }, []);
 
   const addLogRef = useRef(addLog);
@@ -133,14 +157,19 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       before_send: (event) => {
         if (event) {
           const e = event.event;
-          let type: EventLogEntry["type"] = "event";
-          if (e === "$pageview" || e === "$pageleave") type = "pageview";
-          else if (e === "$exception") type = "error";
-          else if (e === "$identify" || e === "$create_alias") type = "identify";
-          else if (e === "$set" || e === "$set_once") type = "person";
-          else if (e === "$groupidentify") type = "group";
-          else if (e === "$feature_flag_called") type = "flag";
-          addLogRef.current({ type, name: e, properties: event.properties });
+          // Skip high-frequency telemetry events from the local Event Log so
+          // it stays readable. They're still sent to PostHog as normal.
+          const SKIP_LOG_EVENTS = new Set(["$$heatmap", "$web_vitals", "web_vitals"]);
+          if (!SKIP_LOG_EVENTS.has(e)) {
+            let type: EventLogEntry["type"] = "event";
+            if (e === "$pageview" || e === "$pageleave") type = "pageview";
+            else if (e === "$exception") type = "error";
+            else if (e === "$identify" || e === "$create_alias") type = "identify";
+            else if (e === "$set" || e === "$set_once") type = "person";
+            else if (e === "$groupidentify") type = "group";
+            else if (e === "$feature_flag_called") type = "flag";
+            addLogRef.current({ type, name: e, properties: event.properties });
+          }
         }
         return event;
       },
@@ -307,8 +336,10 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     setFlagsReady(false);
     setFeatureFlags({});
     setLocalPersonProperties({});
+    setEventLog([]);
     localStorage.removeItem("posthog_config");
     localStorage.removeItem("posthog_pasture_person_props");
+    sessionStorage.removeItem(EVENT_LOG_STORAGE_KEY);
     addLog({ type: "config", name: "Config Reset" });
   }, [addLog]);
 
