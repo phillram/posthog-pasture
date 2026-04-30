@@ -144,12 +144,11 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         setLastRequestError({ status, message, at: Date.now() });
       },
       loaded: (ph) => {
-        ph.onFeatureFlags(() => {
-          const flags = ph.featureFlags.getFlagVariants();
+        ph.onFeatureFlags((_flags, variants) => {
           // Only fire $feature_flag_called events when explicitly requested
           // (e.g. when the user logs in with "Apply feature flags" enabled)
           if (fireFlagEventsRef.current) {
-            Object.entries(flags).forEach(([key, value]) =>
+            Object.entries(variants).forEach(([key, value]) =>
               ph.capture("$feature_flag_called", {
                 $feature_flag: key,
                 $feature_flag_response: value,
@@ -157,7 +156,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             );
             fireFlagEventsRef.current = false;
           }
-          setFeatureFlags(flags as Record<string, boolean | string>);
+          setFeatureFlags(variants);
           setFlagsReady(true);
           if (flagsWatchdogRef.current) {
             clearTimeout(flagsWatchdogRef.current);
@@ -166,7 +165,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
           addLogRef.current({
             type: "flag",
             name: "Feature Flags Ready",
-            properties: flags as Record<string, unknown>,
+            properties: variants as Record<string, unknown>,
           });
         });
       },

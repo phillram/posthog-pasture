@@ -33,6 +33,7 @@ interface PurchaseProps {
   price: number;
   price_display: string;
   currency: "USD";
+  [key: string]: unknown;
 }
 
 function randomItem(): string {
