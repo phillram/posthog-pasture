@@ -46,6 +46,7 @@ interface PosthogContextType {
   stopSessionRecording: () => void;
   isRecording: boolean;
   addLog: (entry: { type: EventLogEntry["type"]; name: string; properties?: Record<string, unknown> }) => void;
+  clearEventLog: () => void;
   lastRequestError: { status: number; message: string; at: number } | null;
   clearRequestError: () => void;
 }
@@ -86,6 +87,12 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const initRef = useRef(false);
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
+  // Tracks whether we've already logged a "Feature Flags Ready" entry for this
+  // init. posthog-js calls onFeatureFlags on every flag re-evaluation
+  // (override toggles, reloads, identify, group, …) — logging it every time
+  // floods the Event Log with duplicates of an event the user only cares
+  // about once.
+  const flagsReadyLoggedRef = useRef(false);
   // Watchdog for the initial /flags request — posthog-js's on_request_error
   // only fires on HTTP >= 400, so silent network failures (ad blockers, CORS,
   // offline) leave us with no visible error. If flags don't arrive in time,
@@ -166,6 +173,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             "$pageview",
             "$pageleave",
             "$autocapture",
+            "$rageclick",
           ]);
           if (!SKIP_LOG_EVENTS.has(e)) {
             let type: EventLogEntry["type"] = "event";
@@ -217,11 +225,14 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             clearTimeout(flagsWatchdogRef.current);
             flagsWatchdogRef.current = null;
           }
-          addLogRef.current({
-            type: "flag",
-            name: "Feature Flags Ready",
-            properties: variants as Record<string, unknown>,
-          });
+          if (!flagsReadyLoggedRef.current) {
+            flagsReadyLoggedRef.current = true;
+            addLogRef.current({
+              type: "flag",
+              name: "Feature Flags Ready",
+              properties: variants as Record<string, unknown>,
+            });
+          }
         });
       },
     });
@@ -289,6 +300,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       // Reset flag state so consumers don't see stale flags from the previous project
       setFlagsReady(false);
       setFeatureFlags({});
+      flagsReadyLoggedRef.current = false;
       const newConfig: PosthogConfig = { ...config, apiKey, apiHost: host };
       runPosthogInit(newConfig);
       setConfig(newConfig);
@@ -344,6 +356,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     setFeatureFlags({});
     setLocalPersonProperties({});
     setEventLog([]);
+    flagsReadyLoggedRef.current = false;
     localStorage.removeItem("posthog_config");
     localStorage.removeItem("posthog_pasture_person_props");
     sessionStorage.removeItem(EVENT_LOG_STORAGE_KEY);
@@ -495,6 +508,15 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
 
   const clearRequestError = useCallback(() => setLastRequestError(null), []);
 
+  const clearEventLog = useCallback(() => {
+    setEventLog([]);
+    try {
+      sessionStorage.removeItem(EVENT_LOG_STORAGE_KEY);
+    } catch {
+      // ignore quota / disabled-storage errors — in-memory state is still cleared
+    }
+  }, []);
+
   return (
     <PosthogContext.Provider
       value={{
@@ -525,6 +547,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         stopSessionRecording,
         isRecording,
         addLog,
+        clearEventLog,
         lastRequestError,
         clearRequestError,
       }}
