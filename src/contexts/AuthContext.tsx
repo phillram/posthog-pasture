@@ -25,8 +25,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { identifyUser, captureEvent, resetPerson, reloadFeatureFlags, reloadFeatureFlagsAndCapture, isInitialized } =
-    usePosthog();
+  const { identifyUser, captureEvent, resetPerson, reloadFeatureFlagsAndCapture } = usePosthog();
 
   useEffect(() => {
     // Hydrate from localStorage on mount — this is a client-only read, so it must
@@ -53,17 +52,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userIdRef.current = user?.id;
   }, [user]);
 
-  // Identify user whenever they're set and posthog is ready (skip guests).
-  // Note: feature flag reloading is triggered manually in login/register to
-  // support the optional applyFeatureFlags behaviour.
-  useEffect(() => {
-    if (user && !user.isGuest && isInitialized) {
-      identifyUser(user.id, {
-        email: user.email,
-        name: user.name,
-      });
-    }
-  }, [user, isInitialized, identifyUser]);
+  // posthog-js auto-fetches /flags on identify(), so we deliberately do not
+  // call identifyUser on every render or rehydration — that would re-issue
+  // /flags + $set on every page navigation. Instead, login/register/loginAsGuest
+  // identify the user exactly once at the auth event itself. On page reload,
+  // posthog-js's own persistence (cookies/localStorage) keeps the distinct_id
+  // set, so re-identifying is unnecessary.
 
   // NOTE: This is demo auth for the PostHog sandbox — the password is hardcoded
   // to "test" intentionally so anyone can try the app without a real backend.
@@ -81,15 +75,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
+      identifyUser(u.id, { email: u.email, name: u.name });
       captureEvent("pasture_user_logged_in", { method: isEmail ? "email" : "username", username });
+      // posthog.identify already triggers a /flags fetch — only re-call when
+      // the user opted in to also fire $feature_flag_called for each flag.
       if (applyFeatureFlags) {
         reloadFeatureFlagsAndCapture();
-      } else {
-        reloadFeatureFlags();
       }
       return true;
     },
-    [captureEvent, reloadFeatureFlags, reloadFeatureFlagsAndCapture]
+    [captureEvent, identifyUser, reloadFeatureFlagsAndCapture]
   );
 
   // `_password` is intentionally unused — this is a demo registration flow
@@ -105,15 +100,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
+      identifyUser(u.id, { email: u.email, name: u.name });
       captureEvent("pasture_user_registered", { method: "email", email, name: username });
+      // See login() — identify already fetches flags; only re-call when the
+      // user wants $feature_flag_called events fired too.
       if (applyFeatureFlags) {
         reloadFeatureFlagsAndCapture();
-      } else {
-        reloadFeatureFlags();
       }
       return true;
     },
-    [captureEvent, reloadFeatureFlags, reloadFeatureFlagsAndCapture]
+    [captureEvent, identifyUser, reloadFeatureFlagsAndCapture]
   );
 
   const loginAsGuest = useCallback(
@@ -129,13 +125,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(u);
       localStorage.setItem("posthog_user", JSON.stringify(u));
       captureEvent("pasture_user_logged_in", { method: "guest", guest_id: guestId });
+      // resetPerson() already triggers PostHog to refresh its anonymous identity
+      // and re-fetch flags. Only force another reload if the user opted in to
+      // capture $feature_flag_called events.
       if (applyFeatureFlags) {
         reloadFeatureFlagsAndCapture();
-      } else {
-        reloadFeatureFlags();
       }
     },
-    [captureEvent, resetPerson, reloadFeatureFlags, reloadFeatureFlagsAndCapture]
+    [captureEvent, resetPerson, reloadFeatureFlagsAndCapture]
   );
 
   const logout = useCallback(() => {
