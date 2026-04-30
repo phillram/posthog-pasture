@@ -64,6 +64,12 @@ export default function EventLogPage() {
     });
   }, [eventLog, typeFilter, search]);
 
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const e of eventLog) counts[e.type] = (counts[e.type] ?? 0) + 1;
+    return counts;
+  }, [eventLog]);
+
   if (isLoading || !isAuthenticated) return null;
 
   const exportPayload = filtered.map((e) => ({
@@ -96,12 +102,6 @@ export default function EventLogPage() {
     URL.revokeObjectURL(url);
     showToast(`Downloaded ${filtered.length} entr${filtered.length === 1 ? "y" : "ies"}`);
   };
-
-  const typeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const e of eventLog) counts[e.type] = (counts[e.type] ?? 0) + 1;
-    return counts;
-  }, [eventLog]);
 
   return (
     <div className="min-h-screen bg-background">
