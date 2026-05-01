@@ -55,7 +55,7 @@ interface PosthogContextType {
 interface EventLogEntry {
   id: string;
   timestamp: Date;
-  type: "event" | "identify" | "pageview" | "group" | "error" | "config" | "person" | "flag" | "recording" | "journey";
+  type: "event" | "identify" | "pageview" | "group" | "error" | "config" | "person" | "flag" | "recording";
   name: string;
   properties?: Record<string, unknown>;
 }
@@ -184,7 +184,6 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
             else if (e === "$set" || e === "$set_once") type = "person";
             else if (e === "$groupidentify") type = "group";
             else if (e === "$feature_flag_called") type = "flag";
-            else if (e.startsWith("pasture_journeys_") || e.startsWith("pasture_journey_")) type = "journey";
             addLogRef.current({ type, name: e, properties: event.properties });
           }
         }
