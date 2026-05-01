@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/useToast";
 
 // Each type maps to its source feature's color so log entries match the rest of the UI:
 // event/pageview/recording = orange (events), identify/person/group = purple (people),
-// flag = green (flags), error = red (errors), config = neutral.
+// flag = green (flags), error = red (errors), journey = indigo (journeys), config = neutral.
 const typeColors: Record<string, string> = {
   event: "text-primary",
   identify: "text-accent",
@@ -22,6 +22,7 @@ const typeColors: Record<string, string> = {
   person: "text-accent",
   flag: "text-success",
   recording: "text-primary",
+  journey: "text-indigo",
 };
 
 const typeBadgeColors: Record<string, string> = {
@@ -34,9 +35,10 @@ const typeBadgeColors: Record<string, string> = {
   person: "bg-accent/20 text-accent",
   flag: "bg-success/20 text-success",
   recording: "bg-primary/20 text-primary",
+  journey: "bg-indigo/20 text-indigo",
 };
 
-const TYPE_OPTIONS = ["all", "event", "identify", "pageview", "group", "error", "config", "person", "flag", "recording"] as const;
+const TYPE_OPTIONS = ["all", "event", "identify", "pageview", "group", "error", "config", "person", "flag", "recording", "journey"] as const;
 
 interface LogEntry {
   id: string;
