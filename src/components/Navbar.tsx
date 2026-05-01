@@ -38,7 +38,7 @@ export default function Navbar() {
             <Link href="/experiments" className="text-muted hover:text-warning transition-colors">
               🧪 Experiments
             </Link>
-            <Link href="/journeys" className="text-muted hover:text-coffee-hover transition-colors">
+            <Link href="/journeys" className="text-muted hover:text-indigo-hover transition-colors">
               🛤️ Journeys
             </Link>
             <Link href="/surveys" className="text-muted hover:text-pink transition-colors">
