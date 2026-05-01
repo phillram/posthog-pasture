@@ -53,7 +53,7 @@ Then log in with any username + password `test`, continue as a guest, or registe
 
 ## Pages
 
-Each page is themed in its own colour so you can see at a glance which area you're in: **Identify** purple, **Events** orange, **Errors** red, **Flags** green, **Experiments** yellow, **Surveys** pink, **Sandboxes** cyan. The Event Log uses the same palette so each entry's badge matches the area it came from.
+Each page is themed in its own colour so you can see at a glance which area you're in: **Identify** purple, **Events** orange, **Errors** red, **Flags** green, **Experiments** yellow, **Journeys** coffee, **Surveys** pink, **Sandboxes** cyan. The Event Log uses the same palette so each entry's badge matches the area it came from.
 
 ### Dashboard
 
@@ -105,6 +105,14 @@ Walk through four steps: pick a feature flag, choose how many simulated users to
 
 The results view shows totals, conversion rate, a per-variant breakdown, and a table of every simulated user with their assigned variant and conversion status. There's also a direct **"View in PostHog →"** link to the experiments dashboard.
 
+### Journeys
+
+Simulate end-to-end user journeys in your PostHog project. Pick how many simulated users you want, choose one or more of eight pre-built flows (Shopper, Window Shopper, New Signup, Search & Browse, Checkout Abandon, Feature Explorer, Support Ticket, Power User), and pick a person profile preset (Casual, Power User, Enterprise).
+
+Each simulated user gets a randomly-generated identity, has feature flags fetched for them, and runs the full flow — login, profile properties, page views, the journey-specific actions, and logout — so you'll see realistic funnels and paths in PostHog. With multiple flows selected, users are split across them. Your own session is never touched.
+
+The results view shows total users, total events sent, a flow breakdown, a per-event tally, and a per-user table. A **"View persons in PostHog →"** link jumps you to the persons dashboard.
+
 ### Surveys
 
 Auto-loads the surveys from your PostHog project on arrival. By default only **Running** surveys are shown, sorted alphabetically. Flip **"Show all statuses"** to also see drafts, scheduled, and completed surveys. A status breakdown across the top shows how many of each you have. **Reload Surveys** refetches from PostHog.
@@ -135,7 +143,7 @@ Filter by **type**, search by **name or properties**, export with **Copy JSON** 
 
 ## Navigation
 
-Setup → Login / Register → Dashboard → Identify → Events → Errors → Flags → Experiments → Surveys → Event Log → Config
+Setup → Login / Register → Dashboard → Identify → Events → Errors → Flags → Experiments → Journeys → Surveys → Event Log → Config
 
 ---
 
