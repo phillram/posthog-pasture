@@ -46,7 +46,7 @@ interface JourneyResultUser {
 
 export default function JourneysPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { featureFlags, flagsReady, isInitialized, captureEvent, config } = usePosthog();
+  const { featureFlags, flagsReady, isInitialized, captureEvent, addLog, config } = usePosthog();
   const router = useRouter();
 
   // Wizard state
@@ -274,10 +274,29 @@ export default function JourneysPage() {
     setResults(resultRows);
     setEventCounts(counts);
 
+    const flowCounts: Record<string, number> = {};
+    for (const r of resultRows) flowCounts[r.flowId] = (flowCounts[r.flowId] ?? 0) + 1;
+
     captureEvent("pasture_journeys_completed", {
       flows: selectedFlowIds,
       user_count: userCount,
       total_events: batchEvents.length,
+      events_by_name: counts,
+      users_by_flow: flowCounts,
+    });
+
+    // Local-only summary entry so the Event Log shows the run at a glance
+    // without flooding it with one entry per simulated event.
+    addLog({
+      type: "event",
+      name: "Journeys run summary",
+      properties: {
+        flows: selectedFlowIds,
+        user_count: userCount,
+        total_events: batchEvents.length,
+        events_by_name: counts,
+        users_by_flow: flowCounts,
+      },
     });
 
     setStep("results");

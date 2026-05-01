@@ -133,7 +133,6 @@ const SEARCH_QUERIES = [
   "discount codes",
   "shipping policy",
 ];
-const FEATURES = ["charts", "reports", "exports", "dashboards", "alerts"];
 const SUPPORT_SUBJECTS = ["Order not received", "Refund request", "Account access", "Bug report"];
 
 function productProps(): Record<string, unknown> {
