@@ -335,7 +335,7 @@ export default function JourneysPage() {
                   setRunError("");
                   setProgressLabel("");
                 }}
-                className="py-2.5 px-4 bg-indigo/20 hover:bg-indigo/30 text-indigo-hover font-medium rounded-lg transition-colors text-sm"
+                className="py-2.5 px-4 bg-brown/20 hover:bg-brown/30 text-brown-hover font-medium rounded-lg transition-colors text-sm"
               >
                 ← New Run
               </button>
@@ -357,9 +357,9 @@ export default function JourneysPage() {
         {step === "configure" && (
           <div className="space-y-6">
             {/* 1. Flows */}
-            <section className="bg-card border border-indigo/30 rounded-xl p-6">
+            <section className="bg-card border border-brown/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-3">
-                <span className="w-6 h-6 rounded-full bg-indigo text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-brown text-white text-xs font-bold flex items-center justify-center shrink-0">
                   1
                 </span>
                 <h2 className="text-base font-semibold text-foreground">Choose journeys</h2>
@@ -379,20 +379,20 @@ export default function JourneysPage() {
                       onClick={() => toggleFlow(flow.id)}
                       className={`min-w-0 overflow-hidden px-3 py-2.5 rounded-lg border text-left transition-colors ${
                         selected
-                          ? "bg-indigo border-indigo text-white"
-                          : "bg-indigo/10 border-indigo/30 text-indigo-hover hover:bg-indigo/20"
+                          ? "bg-brown border-brown text-white"
+                          : "bg-brown/10 border-brown/30 text-brown-hover hover:bg-brown/20"
                       }`}
                     >
                       <span className="block text-sm font-semibold truncate">
                         {flow.emoji} {flow.label}
                       </span>
                       <span
-                        className={`block text-xs mt-0.5 ${selected ? "text-white/80" : "text-indigo-hover/80"}`}
+                        className={`block text-xs mt-0.5 ${selected ? "text-white/80" : "text-brown-hover/80"}`}
                       >
                         {flow.description}
                       </span>
                       <span
-                        className={`block text-xs font-mono mt-1 truncate ${selected ? "text-white/70" : "text-indigo-hover/70"}`}
+                        className={`block text-xs font-mono mt-1 truncate ${selected ? "text-white/70" : "text-brown-hover/70"}`}
                         title={flowStepsPreview(flow)}
                       >
                         {flow.steps.length} steps
@@ -404,9 +404,9 @@ export default function JourneysPage() {
             </section>
 
             {/* 2. User count */}
-            <section className="bg-card border border-indigo/30 rounded-xl p-6">
+            <section className="bg-card border border-brown/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-indigo text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-brown text-white text-xs font-bold flex items-center justify-center shrink-0">
                   2
                 </span>
                 <h2 className="text-base font-semibold text-foreground">Number of simulated users</h2>
@@ -420,7 +420,7 @@ export default function JourneysPage() {
                   onChange={(e) =>
                     setUserCount(Math.max(1, Math.min(500, parseInt(e.target.value) || 1)))
                   }
-                  className="w-24 px-4 py-2.5 bg-input-bg border border-indigo/30 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-indigo text-sm font-mono"
+                  className="w-24 px-4 py-2.5 bg-input-bg border border-brown/30 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-brown text-sm font-mono"
                 />
                 <div className="flex gap-2 flex-wrap">
                   {QUICK_USER_COUNTS.map((n) => (
@@ -429,8 +429,8 @@ export default function JourneysPage() {
                       onClick={() => setUserCount(n)}
                       className={`px-3 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                         userCount === n
-                          ? "bg-indigo border-indigo text-white"
-                          : "bg-indigo/10 hover:bg-indigo/20 text-indigo-hover border-indigo/30"
+                          ? "bg-brown border-brown text-white"
+                          : "bg-brown/10 hover:bg-brown/20 text-brown-hover border-brown/30"
                       }`}
                     >
                       {n}
@@ -444,9 +444,9 @@ export default function JourneysPage() {
             </section>
 
             {/* 3. Profile preset */}
-            <section className="bg-card border border-indigo/30 rounded-xl p-6">
+            <section className="bg-card border border-brown/30 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="w-6 h-6 rounded-full bg-indigo text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-brown text-white text-xs font-bold flex items-center justify-center shrink-0">
                   3
                 </span>
                 <h2 className="text-base font-semibold text-foreground">Person profile preset</h2>
@@ -461,15 +461,15 @@ export default function JourneysPage() {
                     onClick={() => setPreset(p.id)}
                     className={`min-w-0 px-3 py-2.5 rounded-lg border text-left transition-colors ${
                       preset === p.id
-                        ? "bg-indigo border-indigo text-white"
-                        : "bg-indigo/10 border-indigo/30 text-indigo-hover hover:bg-indigo/20"
+                        ? "bg-brown border-brown text-white"
+                        : "bg-brown/10 border-brown/30 text-brown-hover hover:bg-brown/20"
                     }`}
                   >
                     <span className="block text-sm font-semibold">
                       {p.emoji} {p.label}
                     </span>
                     <span
-                      className={`block text-xs mt-0.5 ${preset === p.id ? "text-white/80" : "text-indigo-hover/80"}`}
+                      className={`block text-xs mt-0.5 ${preset === p.id ? "text-white/80" : "text-brown-hover/80"}`}
                     >
                       {p.description}
                     </span>
@@ -480,9 +480,9 @@ export default function JourneysPage() {
 
             {/* 4. Flag exposure */}
             {flagNames.length > 0 && (
-              <section className="bg-card border border-indigo/30 rounded-xl p-6">
+              <section className="bg-card border border-brown/30 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="w-6 h-6 rounded-full bg-indigo text-white text-xs font-bold flex items-center justify-center shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-brown text-white text-xs font-bold flex items-center justify-center shrink-0">
                     4
                   </span>
                   <h2 className="text-base font-semibold text-foreground">Feature flag exposure</h2>
@@ -496,8 +496,8 @@ export default function JourneysPage() {
                     onClick={() => setFlagMode("all")}
                     className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                       flagMode === "all"
-                        ? "bg-indigo border-indigo text-white"
-                        : "bg-indigo/10 hover:bg-indigo/20 text-indigo-hover border-indigo/30"
+                        ? "bg-brown border-brown text-white"
+                        : "bg-brown/10 hover:bg-brown/20 text-brown-hover border-brown/30"
                     }`}
                   >
                     All flags ({flagNames.length})
@@ -506,8 +506,8 @@ export default function JourneysPage() {
                     onClick={() => setFlagMode("one")}
                     className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                       flagMode === "one"
-                        ? "bg-indigo border-indigo text-white"
-                        : "bg-indigo/10 hover:bg-indigo/20 text-indigo-hover border-indigo/30"
+                        ? "bg-brown border-brown text-white"
+                        : "bg-brown/10 hover:bg-brown/20 text-brown-hover border-brown/30"
                     }`}
                   >
                     One flag
@@ -516,7 +516,7 @@ export default function JourneysPage() {
                     <select
                       value={flagToBind}
                       onChange={(e) => setFlagToBind(e.target.value)}
-                      className="px-3 py-2 bg-input-bg border border-indigo/30 rounded-lg text-foreground text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo"
+                      className="px-3 py-2 bg-input-bg border border-brown/30 rounded-lg text-foreground text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brown"
                     >
                       <option value="">Select a flag…</option>
                       {flagNames.map((name) => (
@@ -534,7 +534,7 @@ export default function JourneysPage() {
             )}
 
             {/* Summary + Start */}
-            <div className="bg-card border border-indigo/30 rounded-xl p-6">
+            <div className="bg-card border border-brown/30 rounded-xl p-6">
               <h3 className="text-sm font-semibold text-foreground mb-3">Summary</h3>
               <div className="grid grid-cols-2 gap-3 text-sm mb-5">
                 <div>
@@ -563,7 +563,7 @@ export default function JourneysPage() {
               <button
                 onClick={runJourneys}
                 disabled={selectedFlowIds.length === 0 || !isInitialized}
-                className="w-full py-3 bg-indigo hover:bg-indigo-hover text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-brown hover:bg-brown-hover text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🛤️ Start Journeys
               </button>
@@ -576,7 +576,7 @@ export default function JourneysPage() {
 
         {/* ── Running ── */}
         {step === "running" && (
-          <div className="bg-card border border-indigo/30 rounded-xl p-10 flex flex-col items-center text-center space-y-6">
+          <div className="bg-card border border-brown/30 rounded-xl p-10 flex flex-col items-center text-center space-y-6">
             <div className="text-5xl animate-pulse">🛤️</div>
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-1">Running journeys…</h2>
@@ -591,7 +591,7 @@ export default function JourneysPage() {
               </div>
               <div className="w-full h-3 bg-input-bg rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo rounded-full transition-all duration-200"
+                  className="h-full bg-brown rounded-full transition-all duration-200"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -637,7 +637,7 @@ export default function JourneysPage() {
             </div>
 
             {/* Flow breakdown */}
-            <div className="bg-card border border-indigo/30 rounded-xl p-6">
+            <div className="bg-card border border-brown/30 rounded-xl p-6">
               <h3 className="text-sm font-semibold text-foreground mb-3">Flow breakdown</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[...new Set(results.map((r) => r.flowId))].map((flowId) => {
@@ -645,12 +645,12 @@ export default function JourneysPage() {
                   const group = results.filter((r) => r.flowId === flowId);
                   const pct = results.length > 0 ? (group.length / results.length) * 100 : 0;
                   return (
-                    <div key={flowId} className="bg-input-bg border border-indigo/20 rounded-lg p-3">
+                    <div key={flowId} className="bg-input-bg border border-brown/20 rounded-lg p-3">
                       <span className="block text-sm font-medium text-foreground">
                         {flow?.emoji} {flow?.label ?? flowId}
                       </span>
                       <p className="text-xs text-muted mt-1">{group.length} users</p>
-                      <p className="text-xs font-semibold text-indigo-hover mt-0.5">{pct.toFixed(1)}%</p>
+                      <p className="text-xs font-semibold text-brown-hover mt-0.5">{pct.toFixed(1)}%</p>
                     </div>
                   );
                 })}
@@ -658,7 +658,7 @@ export default function JourneysPage() {
             </div>
 
             {/* Per-event totals */}
-            <div className="bg-card border border-indigo/30 rounded-xl p-6">
+            <div className="bg-card border border-brown/30 rounded-xl p-6">
               <h3 className="text-sm font-semibold text-foreground mb-3">Events sent</h3>
               <div className="overflow-x-auto max-h-64 overflow-y-auto">
                 <table className="w-full text-sm">
@@ -674,7 +674,7 @@ export default function JourneysPage() {
                       .map(([name, count]) => (
                         <tr key={name} className="border-b border-border/50 last:border-0">
                           <td className="py-1.5 pr-4 font-mono text-xs text-foreground">{name}</td>
-                          <td className="py-1.5 text-right font-mono text-xs text-indigo-hover">
+                          <td className="py-1.5 text-right font-mono text-xs text-brown-hover">
                             {count.toLocaleString()}
                           </td>
                         </tr>
@@ -685,14 +685,14 @@ export default function JourneysPage() {
             </div>
 
             {/* Sample user table */}
-            <div className="bg-card border border-indigo/30 rounded-xl p-6">
+            <div className="bg-card border border-brown/30 rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-foreground">User runs</h3>
                 <a
                   href={personsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-2 px-4 bg-indigo/20 hover:bg-indigo/30 text-indigo-hover font-medium rounded-lg transition-colors text-xs"
+                  className="py-2 px-4 bg-brown/20 hover:bg-brown/30 text-brown-hover font-medium rounded-lg transition-colors text-xs"
                 >
                   View persons in PostHog →
                 </a>
@@ -712,7 +712,7 @@ export default function JourneysPage() {
                       <tr key={r.username} className="border-b border-border/50 last:border-0">
                         <td className="py-1.5 pr-4 font-mono text-xs text-foreground">{r.username}</td>
                         <td className="py-1.5 pr-4">
-                          <span className="px-2 py-0.5 text-xs rounded font-mono bg-indigo/20 text-indigo-hover">
+                          <span className="px-2 py-0.5 text-xs rounded font-mono bg-brown/20 text-brown-hover">
                             {r.flowId}
                           </span>
                         </td>
@@ -743,7 +743,7 @@ function flowStepsPreview(flow: Flow): string {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-card border border-indigo/30 rounded-xl p-4 text-center">
+    <div className="bg-card border border-brown/30 rounded-xl p-4 text-center">
       <p className="text-2xl font-bold text-foreground">{value}</p>
       <p className="text-xs text-muted mt-1">{label}</p>
     </div>
