@@ -9,64 +9,12 @@ import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
 import { randomPurchaseProps } from "@/lib/purchase";
-
-// ── Name generation ──────────────────────────────────────────────────────────
-
-const ADJECTIVES = [
-  "swift",
-  "brave",
-  "golden",
-  "silver",
-  "scarlet",
-  "cosmic",
-  "fuzzy",
-  "blazing",
-  "stormy",
-  "crimson",
-  "turbo",
-  "vivid",
-  "ancient",
-  "electric",
-  "silent",
-  "bold",
-  "jade",
-  "rusty",
-  "marble",
-  "velvet",
-  "neon",
-  "amber",
-  "cobalt",
-  "mossy",
-];
-const NOUNS = [
-  "hedgehog",
-  "badger",
-  "falcon",
-  "rabbit",
-  "otter",
-  "porcupine",
-  "marmot",
-  "sparrow",
-  "lynx",
-  "wombat",
-  "capybara",
-  "penguin",
-  "flamingo",
-  "quokka",
-  "axolotl",
-  "narwhal",
-  "platypus",
-  "toucan",
-  "gecko",
-  "raccoon",
-  "lemur",
-];
-
-function generateUsername(index: number): string {
-  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  return `pasture_${adj}_${noun}_${String(index + 1).padStart(3, "0")}`;
-}
+import {
+  generateUsername,
+  buildPersonProps,
+  buildProtocolMarkerEvent,
+  randomProfilePreset,
+} from "@/lib/simulatedUsers";
 
 // ── Conversion actions ────────────────────────────────────────────────────────
 
@@ -226,15 +174,22 @@ export default function ExperimentsPage() {
       const { username, actionCompleted, ts } = plan[i];
       const variant = String(variants[i]);
 
-      // Step 2: Identify the user in PostHog
+      // Step 2: Identify the user in PostHog with a full profile (plan,
+      // monthly_sessions, …) — the preset is randomised per user so an
+      // experiment run produces a realistic mix of personas.
       batchEvents.push({
         event: "$identify",
         distinct_id: username,
         timestamp: ts,
         properties: {
-          $set: { name: username, experiment_user: true },
+          $set: buildPersonProps(randomProfilePreset(), username),
         },
       });
+
+      // Append the protocol marker as its own `$set` event so the
+      // "this user came from the Experiments page" tag stays decoupled from
+      // the shared person-profile shape.
+      batchEvents.push(buildProtocolMarkerEvent(username, "pasture_experiment", ts));
 
       // Step 3: Record flag exposure with the variant PostHog assigned
       batchEvents.push({

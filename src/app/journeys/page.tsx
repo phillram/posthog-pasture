@@ -8,15 +8,13 @@ import Navbar from "@/components/Navbar";
 import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
+import { FLOWS, findFlow, avgEventsPerUser, type Flow } from "@/lib/journeys";
 import {
-  FLOWS,
-  findFlow,
   generateUsername,
   buildPersonProps,
-  avgEventsPerUser,
-  type Flow,
+  buildProtocolMarkerEvent,
   type ProfilePreset,
-} from "@/lib/journeys";
+} from "@/lib/simulatedUsers";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -181,11 +179,11 @@ export default function JourneysPage() {
       let stepIndex = 0;
       const tsAt = () => new Date(baseTs + stepIndex * EVENT_STAGGER_MS).toISOString();
       const commonJourneyProps = {
-        pasture_journey: flow.id,
+        pasture_journey_flow: flow.id,
         pasture_journey_user_index: i,
       };
 
-      // Identify
+      // Identify with the full profile…
       batchEvents.push({
         event: "$identify",
         distinct_id: username,
@@ -196,6 +194,13 @@ export default function JourneysPage() {
         },
       });
       bumpCount("$identify");
+      stepIndex++;
+
+      // …then append the protocol marker as its own `$set` event so the
+      // "this user came from the Journeys page" tag is decoupled from the
+      // shared person-profile shape.
+      batchEvents.push(buildProtocolMarkerEvent(username, "pasture_journey", tsAt()));
+      bumpCount("$set");
       stepIndex++;
 
       // Feature flag exposures
