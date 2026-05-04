@@ -7,7 +7,7 @@
 // Note on future timestamps: PostHog rejects events whose timestamp is more
 // than ~23 hours ahead of ingestion time, so all spread is into the past only.
 
-export type TimingMode = "burst" | "1h" | "1d" | "5d";
+export type TimingMode = "burst" | "1h" | "1d" | "5d" | "10d" | "15d" | "30d";
 
 export interface TimingModeMeta {
   id: TimingMode;
@@ -36,6 +36,21 @@ export const TIMING_MODES: TimingModeMeta[] = [
     label: "Past 5 days",
     description: "Sessions spread across the past 5 days, gaps 100ms–6h.",
   },
+  {
+    id: "10d",
+    label: "Past 10 days",
+    description: "Sessions spread across the past 10 days, gaps 100ms–12h.",
+  },
+  {
+    id: "15d",
+    label: "Past 15 days",
+    description: "Sessions spread across the past 15 days, gaps 100ms–18h.",
+  },
+  {
+    id: "30d",
+    label: "Past 30 days",
+    description: "Sessions spread across the past 30 days, gaps 100ms–24h.",
+  },
 ];
 
 interface ModeShape {
@@ -46,11 +61,17 @@ interface ModeShape {
   maxGapMs: number;
 }
 
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
 const SHAPES: Record<TimingMode, ModeShape> = {
   burst: { spreadMs: 0, minGapMs: 50, maxGapMs: 50 },
-  "1h": { spreadMs: 60 * 60 * 1000, minGapMs: 100, maxGapMs: 5 * 60 * 1000 },
-  "1d": { spreadMs: 24 * 60 * 60 * 1000, minGapMs: 100, maxGapMs: 30 * 60 * 1000 },
-  "5d": { spreadMs: 5 * 24 * 60 * 60 * 1000, minGapMs: 100, maxGapMs: 6 * 60 * 60 * 1000 },
+  "1h": { spreadMs: HOUR, minGapMs: 100, maxGapMs: 5 * 60 * 1000 },
+  "1d": { spreadMs: DAY, minGapMs: 100, maxGapMs: 30 * 60 * 1000 },
+  "5d": { spreadMs: 5 * DAY, minGapMs: 100, maxGapMs: 6 * HOUR },
+  "10d": { spreadMs: 10 * DAY, minGapMs: 100, maxGapMs: 12 * HOUR },
+  "15d": { spreadMs: 15 * DAY, minGapMs: 100, maxGapMs: 18 * HOUR },
+  "30d": { spreadMs: 30 * DAY, minGapMs: 100, maxGapMs: 24 * HOUR },
 };
 
 /** Random integer in [min, max]. */

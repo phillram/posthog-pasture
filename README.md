@@ -101,7 +101,7 @@ If the flag list stays empty after a few seconds, an ad blocker or privacy exten
 
 A wizard that generates realistic experiment data in your PostHog project using simulated users. Each simulated user gets their own distinct ID so your own session is never affected.
 
-Walk through five steps: pick a feature flag, choose how many simulated users to generate, set a conversion rate, pick a conversion action, and choose an event-timing spread (Burst, Past hour, Past day, or Past 5 days) so trend lines look natural rather than spiking at the moment of the run.
+Walk through five steps: pick a feature flag, choose how many simulated users to generate, set a conversion rate, pick a conversion action, and choose an event-timing spread (Burst through Past 30 days) so trend lines look natural rather than spiking at the moment of the run.
 
 Every simulated person is identified with a full profile (name, email, country, signup date, plan tier) and tagged with a `pasture_experiment: true` person property so you can filter for users created by this page in PostHog. The plan tier is randomised per user so a run produces a realistic mix of personas.
 
@@ -115,7 +115,7 @@ Each simulated user gets a randomly-generated identity, has feature flags fetche
 
 Every simulated person is identified with the same full profile shape used by Experiments (name, email, country, signup date, plan tier) and tagged with a `pasture_journey: true` person property so you can filter for users created by this page in PostHog.
 
-An **Event timing** picker controls how event timestamps are spread. Burst keeps every event close to "now" with tiny gaps (good for a quick test). Past hour, Past day, and Past 5 days spread session start times back into that window and randomise the per-event gap, so trend lines and funnels show natural curves instead of one tall spike. All spread is into the past — PostHog rejects timestamps far in the future.
+An **Event timing** picker controls how event timestamps are spread. Burst keeps every event close to "now" with tiny gaps (good for a quick test). Past hour, Past day, Past 5 / 10 / 15 / 30 days each spread session start times back into that window and randomise the per-event gap, so trend lines and funnels show natural curves instead of one tall spike. All spread is into the past — PostHog rejects timestamps far in the future.
 
 The results view shows total users, total events sent, a flow breakdown, a per-event tally, and a per-user table. A "View persons in PostHog →" link jumps you to the persons dashboard.
 
