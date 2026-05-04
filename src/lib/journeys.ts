@@ -1,102 +1,16 @@
 import { randomPurchaseProps } from "./purchase";
 
-// ── Username generation ──────────────────────────────────────────────────────
-// Same pattern as the Experiments page so simulated users are visually
-// recognisable in PostHog. Lists are duplicated rather than shared to keep the
-// experiments page untouched.
-
-const ADJECTIVES = [
-  "swift",
-  "brave",
-  "golden",
-  "silver",
-  "scarlet",
-  "cosmic",
-  "fuzzy",
-  "blazing",
-  "stormy",
-  "crimson",
-  "turbo",
-  "vivid",
-  "ancient",
-  "electric",
-  "silent",
-  "bold",
-  "jade",
-  "rusty",
-  "marble",
-  "velvet",
-  "neon",
-  "amber",
-  "cobalt",
-  "mossy",
-];
-const NOUNS = [
-  "hedgehog",
-  "badger",
-  "falcon",
-  "rabbit",
-  "otter",
-  "porcupine",
-  "marmot",
-  "sparrow",
-  "lynx",
-  "wombat",
-  "capybara",
-  "penguin",
-  "flamingo",
-  "quokka",
-  "axolotl",
-  "narwhal",
-  "platypus",
-  "toucan",
-  "gecko",
-  "raccoon",
-  "lemur",
-];
-
-export function generateUsername(index: number): string {
-  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  return `pasture_${adj}_${noun}_${String(index + 1).padStart(3, "0")}`;
-}
-
-// ── Person profile presets ───────────────────────────────────────────────────
-
-export type ProfilePreset = "casual" | "power_user" | "enterprise";
-
-const COUNTRIES = ["US", "GB", "DE", "FR", "JP", "AU", "CA", "BR", "IN", "ZA"];
+// User generation, person presets, and the protocol marker live in
+// `simulatedUsers.ts` and are shared with the Experiments page.
+export {
+  generateUsername,
+  buildPersonProps,
+  randomProfilePreset,
+  type ProfilePreset,
+} from "./simulatedUsers";
 
 function randomFrom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
-}
-
-export function buildPersonProps(
-  preset: ProfilePreset,
-  username: string
-): Record<string, unknown> {
-  const country = randomFrom(COUNTRIES);
-  const daysAgo = Math.floor(Math.random() * 365) + 1;
-  const signupDate = new Date(Date.now() - daysAgo * 86_400_000).toISOString();
-  const base = {
-    name: username,
-    email: `${username}@pasture.test`,
-    country,
-    signup_date: signupDate,
-    pasture_simulated: true,
-  };
-  if (preset === "casual") {
-    return { ...base, plan: "free", monthly_sessions: Math.floor(Math.random() * 5) + 1 };
-  }
-  if (preset === "power_user") {
-    return { ...base, plan: "pro", monthly_sessions: Math.floor(Math.random() * 30) + 20 };
-  }
-  return {
-    ...base,
-    plan: "enterprise",
-    monthly_sessions: Math.floor(Math.random() * 100) + 50,
-    seats: Math.floor(Math.random() * 50) + 10,
-  };
 }
 
 // ── Step + Flow types ────────────────────────────────────────────────────────
