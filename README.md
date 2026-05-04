@@ -101,7 +101,7 @@ If the flag list stays empty after a few seconds, an ad blocker or privacy exten
 
 A wizard that generates realistic experiment data in your PostHog project using simulated users. Each simulated user gets their own distinct ID so your own session is never affected.
 
-Walk through four steps: pick a feature flag, choose how many simulated users to generate, set a conversion rate, and pick a conversion action.
+Walk through five steps: pick a feature flag, choose how many simulated users to generate, set a conversion rate, pick a conversion action, and choose an event-timing spread (Burst, Past hour, Past day, or Past 5 days) so trend lines look natural rather than spiking at the moment of the run.
 
 Every simulated person is identified with a full profile (name, email, country, signup date, plan tier) and tagged with a `pasture_experiment: true` person property so you can filter for users created by this page in PostHog. The plan tier is randomised per user so a run produces a realistic mix of personas.
 
@@ -114,6 +114,8 @@ Simulate end-to-end user journeys in your PostHog project. Pick how many simulat
 Each simulated user gets a randomly-generated identity, has feature flags fetched for them, and runs the full flow — login, profile properties, page views, the journey-specific actions, and logout — so you'll see realistic funnels and paths in PostHog. With multiple flows selected, users are split across them. Your own session is never touched.
 
 Every simulated person is identified with the same full profile shape used by Experiments (name, email, country, signup date, plan tier) and tagged with a `pasture_journey: true` person property so you can filter for users created by this page in PostHog.
+
+An **Event timing** picker controls how event timestamps are spread. Burst keeps every event close to "now" with tiny gaps (good for a quick test). Past hour, Past day, and Past 5 days spread session start times back into that window and randomise the per-event gap, so trend lines and funnels show natural curves instead of one tall spike. All spread is into the past — PostHog rejects timestamps far in the future.
 
 The results view shows total users, total events sent, a flow breakdown, a per-event tally, and a per-user table. A "View persons in PostHog →" link jumps you to the persons dashboard.
 
@@ -154,3 +156,11 @@ Setup → Login / Register → Dashboard → Identify → Events → Errors → 
 ## Data & Privacy
 
 All configuration and session data is kept locally in your browser. Nothing is persisted on any server; your API key is only ever sent to PostHog.
+
+---
+
+## Optional: daily journey cron (power users only)
+
+A scheduled task can fire a journey run once a day so your PostHog project stays continuously populated without anyone clicking the Journeys page button. **It is entirely optional** and does not affect day-to-day usage of Pasture — if you don't set it up, nothing changes.
+
+It lives in its own folder, separate from the page UI: [`src/app/api/cron/journeys/`](./src/app/api/cron/journeys/README.md). The README in that folder has the full setup steps (Vercel env vars, schedule format, manual-trigger curl, how to disable). Short version: deploy on Vercel, set `POSTHOG_API_KEY` / `POSTHOG_HOST` / `CRON_SECRET` in your project's env vars, redeploy.

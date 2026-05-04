@@ -15,6 +15,7 @@ import {
   buildProtocolMarkerEvent,
   randomProfilePreset,
 } from "@/lib/simulatedUsers";
+import { TIMING_MODES, pickSessionStart, makeTimestamper, type TimingMode } from "@/lib/timing";
 
 // ── Conversion actions ────────────────────────────────────────────────────────
 
@@ -68,6 +69,9 @@ export default function ExperimentsPage() {
   // Step 4: conversion % — randomised on mount
   const [conversionPct, setConversionPct] = useState(() => Math.floor(Math.random() * 100) + 1);
 
+  // Step 5: timing spread
+  const [timingMode, setTimingMode] = useState<TimingMode>("burst");
+
   // Running state
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
@@ -112,20 +116,20 @@ export default function ExperimentsPage() {
       user_count: userCount,
       conversion_action: selectedAction,
       conversion_pct: conversionPct,
+      timing_mode: timingMode,
       triggered_by: user?.id,
     });
 
     // Pre-generate all usernames and conversion outcomes up front so we can
     // reference them stably across the async decide calls.
-    const now = new Date();
-    const plan: Array<{ username: string; actionCompleted: boolean; ts: string }> = Array.from(
+    const now = Date.now();
+    const plan: Array<{ username: string; actionCompleted: boolean; sessionStart: number }> = Array.from(
       { length: userCount },
       (_, i) => ({
         username: generateUsername(i),
         // Determine NOW whether this user will convert — independent of variant
         actionCompleted: Math.random() * 100 < conversionPct,
-        // Stagger timestamps so PostHog preserves event order
-        ts: new Date(now.getTime() + i * 100).toISOString(),
+        sessionStart: pickSessionStart(now, timingMode, i),
       })
     );
 
@@ -171,8 +175,9 @@ export default function ExperimentsPage() {
     const batchEvents: Record<string, unknown>[] = [];
 
     for (let i = 0; i < userCount; i++) {
-      const { username, actionCompleted, ts } = plan[i];
+      const { username, actionCompleted, sessionStart } = plan[i];
       const variant = String(variants[i]);
+      const tsAt = makeTimestamper(sessionStart, timingMode);
 
       // Step 2: Identify the user in PostHog with a full profile (plan,
       // monthly_sessions, …) — the preset is randomised per user so an
@@ -180,7 +185,7 @@ export default function ExperimentsPage() {
       batchEvents.push({
         event: "$identify",
         distinct_id: username,
-        timestamp: ts,
+        timestamp: tsAt(),
         properties: {
           $set: buildPersonProps(randomProfilePreset(), username),
         },
@@ -189,13 +194,13 @@ export default function ExperimentsPage() {
       // Append the protocol marker as its own `$set` event so the
       // "this user came from the Experiments page" tag stays decoupled from
       // the shared person-profile shape.
-      batchEvents.push(buildProtocolMarkerEvent(username, "pasture_experiment", ts));
+      batchEvents.push(buildProtocolMarkerEvent(username, "pasture_experiment", tsAt()));
 
       // Step 3: Record flag exposure with the variant PostHog assigned
       batchEvents.push({
         event: "$feature_flag_called",
         distinct_id: username,
-        timestamp: ts,
+        timestamp: tsAt(),
         properties: {
           $feature_flag: selectedFlag,
           $feature_flag_response: variants[i],
@@ -212,7 +217,7 @@ export default function ExperimentsPage() {
         batchEvents.push({
           event: actionInfo.event,
           distinct_id: username,
-          timestamp: ts,
+          timestamp: tsAt(),
           properties: {
             ...conversionProps,
             experiment_flag: selectedFlag,
@@ -495,6 +500,40 @@ export default function ExperimentsPage() {
               </div>
             </section>
 
+            {/* Step 5: Timing */}
+            <section className="bg-card border border-warning/30 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-6 h-6 rounded-full bg-warning text-black text-xs font-bold flex items-center justify-center shrink-0">
+                  5
+                </span>
+                <h2 className="text-base font-semibold text-foreground">Event timing</h2>
+              </div>
+              <p className="text-muted text-xs mb-3 ml-9">
+                Spread sessions and per-event gaps so trends look natural instead of a single tall spike. All spread is
+                into the past — PostHog rejects timestamps far in the future.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 ml-9">
+                {TIMING_MODES.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setTimingMode(m.id)}
+                    className={`min-w-0 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                      timingMode === m.id
+                        ? "bg-warning border-warning text-black"
+                        : "bg-warning/10 border-warning/30 text-warning hover:bg-warning/20"
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{m.label}</span>
+                    <span
+                      className={`block text-xs mt-0.5 ${timingMode === m.id ? "text-black/80" : "text-warning/80"}`}
+                    >
+                      {m.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
             {/* Summary + Start */}
             <div className="bg-card border border-warning/30 rounded-xl p-6">
               <h3 className="text-sm font-semibold text-foreground mb-3">Summary</h3>
@@ -516,6 +555,12 @@ export default function ExperimentsPage() {
                 <div>
                   <p className="text-muted text-xs">Action</p>
                   <p className="font-mono text-foreground mt-0.5">{actionInfo.event}</p>
+                </div>
+                <div>
+                  <p className="text-muted text-xs">Event timing</p>
+                  <p className="font-mono text-foreground mt-0.5">
+                    {TIMING_MODES.find((m) => m.id === timingMode)?.label ?? timingMode}
+                  </p>
                 </div>
               </div>
               <button
