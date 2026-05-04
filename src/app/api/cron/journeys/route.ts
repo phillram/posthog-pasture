@@ -15,22 +15,22 @@ export const maxDuration = 60;
 
 export async function GET(request: Request) {
   const apiKey =
-    process.env.POSTHOG_PROJECT_API_KEY ?? process.env.POSTHOG_API_KEY;
+    process.env.POSTHOG_API_KEY ?? process.env.POSTHOG_PROJECT_API_KEY;
   const apiHost =
-    process.env.NEXT_PUBLIC_POSTHOG_HOST ??
     process.env.POSTHOG_HOST ??
+    process.env.NEXT_PUBLIC_POSTHOG_HOST ??
     "https://us.i.posthog.com";
   const cronSecret = process.env.CRON_SECRET;
 
   if (!apiKey) {
     console.error(
-      "[cron/journeys] POSTHOG_PROJECT_API_KEY (or POSTHOG_API_KEY) env var is not set"
+      "[cron/journeys] POSTHOG_API_KEY (or POSTHOG_PROJECT_API_KEY) env var is not set"
     );
     return NextResponse.json(
       {
         ok: false,
         error:
-          "POSTHOG_PROJECT_API_KEY (or POSTHOG_API_KEY) env var is not set",
+          "POSTHOG_API_KEY (or POSTHOG_PROJECT_API_KEY) env var is not set",
       },
       { status: 500 }
     );
