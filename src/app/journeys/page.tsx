@@ -15,12 +15,11 @@ import {
   buildProtocolMarkerEvent,
   type ProfilePreset,
 } from "@/lib/simulatedUsers";
+import { TIMING_MODES, pickSessionStart, makeTimestamper, type TimingMode } from "@/lib/timing";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const DECIDE_CONCURRENCY = 6;
-const USER_STAGGER_MS = 1000;
-const EVENT_STAGGER_MS = 50;
 
 const QUICK_USER_COUNTS = [10, 25, 50, 100, 200, 500];
 
@@ -62,6 +61,9 @@ export default function JourneysPage() {
   // Step 4: flag exposure
   const [flagMode, setFlagMode] = useState<FlagMode>("all");
   const [flagToBind, setFlagToBind] = useState<string>("");
+
+  // Step 5: timing spread
+  const [timingMode, setTimingMode] = useState<TimingMode>("burst");
 
   // Running / results state
   const [progress, setProgress] = useState(0);
@@ -112,6 +114,7 @@ export default function JourneysPage() {
       profile_preset: preset,
       flag_mode: flagMode,
       flag_bound: flagMode === "one" ? flagToBind : null,
+      timing_mode: timingMode,
       triggered_by: user?.id,
     });
 
@@ -126,7 +129,7 @@ export default function JourneysPage() {
         username,
         flow,
         personProps: buildPersonProps(preset, username),
-        baseTs: now + i * USER_STAGGER_MS,
+        sessionStart: pickSessionStart(now, timingMode, i),
         flagsByName: {} as Record<string, boolean | string>,
       };
     });
@@ -175,9 +178,9 @@ export default function JourneysPage() {
 
     for (let i = 0; i < userCount; i++) {
       const entry = plan[i];
-      const { username, flow, personProps, baseTs, flagsByName } = entry;
-      let stepIndex = 0;
-      const tsAt = () => new Date(baseTs + stepIndex * EVENT_STAGGER_MS).toISOString();
+      const { username, flow, personProps, sessionStart, flagsByName } = entry;
+      const tsAt = makeTimestamper(sessionStart, timingMode);
+      let eventCount = 0;
       const commonJourneyProps = {
         pasture_journey_flow: flow.id,
         pasture_journey_user_index: i,
@@ -194,14 +197,14 @@ export default function JourneysPage() {
         },
       });
       bumpCount("$identify");
-      stepIndex++;
+      eventCount++;
 
       // …then append the protocol marker as its own `$set` event so the
       // "this user came from the Journeys page" tag is decoupled from the
       // shared person-profile shape.
       batchEvents.push(buildProtocolMarkerEvent(username, "pasture_journey", tsAt()));
       bumpCount("$set");
-      stepIndex++;
+      eventCount++;
 
       // Feature flag exposures
       const flagEntries: [string, boolean | string][] = Object.entries(flagsByName);
@@ -224,7 +227,7 @@ export default function JourneysPage() {
           },
         });
         bumpCount("$feature_flag_called");
-        stepIndex++;
+        eventCount++;
       }
 
       // Flow steps
@@ -241,14 +244,14 @@ export default function JourneysPage() {
           },
         });
         bumpCount(fStep.event);
-        stepIndex++;
+        eventCount++;
       }
 
       const firstFlag = flagEntries[0];
       resultRows.push({
         username,
         flowId: flow.id,
-        eventsFired: stepIndex,
+        eventsFired: eventCount,
         firstFlagValue: firstFlag ? `${firstFlag[0]}=${String(firstFlag[1])}` : "—",
       });
     }
@@ -538,6 +541,40 @@ export default function JourneysPage() {
               </section>
             )}
 
+            {/* 5. Timing spread */}
+            <section className="bg-card border border-brown/30 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-6 h-6 rounded-full bg-brown text-white text-xs font-bold flex items-center justify-center shrink-0">
+                  {flagNames.length > 0 ? 5 : 4}
+                </span>
+                <h2 className="text-base font-semibold text-foreground">Event timing</h2>
+              </div>
+              <p className="text-muted text-xs mb-3 ml-9">
+                Spread session start times and event gaps so PostHog trends look natural instead of a single tall spike.
+                All spread is into the past — PostHog rejects timestamps far in the future.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 ml-9">
+                {TIMING_MODES.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setTimingMode(m.id)}
+                    className={`min-w-0 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                      timingMode === m.id
+                        ? "bg-brown border-brown text-white"
+                        : "bg-brown/10 border-brown/30 text-brown-hover hover:bg-brown/20"
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{m.label}</span>
+                    <span
+                      className={`block text-xs mt-0.5 ${timingMode === m.id ? "text-white/80" : "text-brown-hover/80"}`}
+                    >
+                      {m.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
             {/* Summary + Start */}
             <div className="bg-card border border-brown/30 rounded-xl p-6">
               <h3 className="text-sm font-semibold text-foreground mb-3">Summary</h3>
@@ -563,6 +600,12 @@ export default function JourneysPage() {
                 <div>
                   <p className="text-muted text-xs">Estimated events</p>
                   <p className="font-mono text-foreground mt-0.5">≈ {estimatedEvents.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-muted text-xs">Event timing</p>
+                  <p className="font-mono text-foreground mt-0.5">
+                    {TIMING_MODES.find((m) => m.id === timingMode)?.label ?? timingMode}
+                  </p>
                 </div>
               </div>
               <button
