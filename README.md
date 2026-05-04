@@ -163,4 +163,4 @@ All configuration and session data is kept locally in your browser. Nothing is p
 
 A scheduled task can fire a journey run once a day so your PostHog project stays continuously populated without anyone clicking the Journeys page button. **It is entirely optional** and does not affect day-to-day usage of Pasture — if you don't set it up, nothing changes.
 
-It lives in its own folder, separate from the page UI: [`src/app/api/cron/journeys/`](./src/app/api/cron/journeys/README.md). The README in that folder has the full setup steps (Vercel env vars, schedule format, manual-trigger curl, how to disable). Short version: deploy on Vercel, set `POSTHOG_API_KEY` / `POSTHOG_HOST` / `CRON_SECRET` in your project's env vars, redeploy.
+It lives in its own folder, separate from the page UI: [`src/app/api/cron/journeys/`](./src/app/api/cron/journeys/README.md). The README in that folder has the full setup steps (Vercel env vars, schedule format, manual-trigger curl, how to disable). Short version: deploy on Vercel, set `POSTHOG_PROJECT_API_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` / `CRON_SECRET` in your project's env vars, redeploy.

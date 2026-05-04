@@ -15,8 +15,8 @@ When triggered, it generates a batch of simulated users running pre-built journe
 
    | Name | Value |
    | --- | --- |
-   | `POSTHOG_API_KEY` | Your PostHog Project API Key (the same one you use in the Pasture UI) |
-   | `POSTHOG_HOST` | `https://us.i.posthog.com` or `https://eu.i.posthog.com` |
+   | `POSTHOG_PROJECT_API_KEY` (or `POSTHOG_API_KEY`) | Your PostHog Project API Key (the same one you use in the Pasture UI) |
+   | `NEXT_PUBLIC_POSTHOG_HOST` (or `POSTHOG_HOST`) | `https://us.i.posthog.com` or `https://eu.i.posthog.com` |
    | `CRON_SECRET` | A random string — Vercel auto-injects this on cron requests |
 
 3. **Redeploy.** The cron will fire on the schedule in `vercel.json`.
