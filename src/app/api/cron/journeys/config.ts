@@ -20,7 +20,15 @@ export interface CronJourneyConfig {
 }
 
 export const CRON_JOURNEY_CONFIG: CronJourneyConfig = {
-  flowIds: ["shopper", "window_shopper", "new_signup", "search_and_browse", "checkout_abandon"],
+  flowIds: [
+    "shopper",
+    "window_shopper",
+    "new_signup",
+    "search_and_browse",
+    "checkout_abandon",
+    "feature_explorer",
+    "power_user",
+  ],
   userCount: 50,
   profilePreset: "casual",
   flagMode: "all",
