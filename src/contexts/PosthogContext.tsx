@@ -154,6 +154,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       // before identify() — otherwise the default 'identified_only' silently
       // drops $set events on anonymous sessions.
       person_profiles: "always",
+      // No-code (web) experiments are disabled by default in posthog-js.
+      // This sandbox needs them enabled so the Experiments UI can run.
+      disable_web_experiments: false,
       // The Errors page only exercises manual captureException() calls. Turn
       // on real uncaught-error/unhandled-rejection autocapture too, since
       // that's a PostHog feature this sandbox should also let you test.
