@@ -148,19 +148,13 @@ export default function DashboardPage() {
         },
         {
           name: "Sign Up Started",
-          // Matches the "pasture_signup" convention used by journeys.ts and
-          // experiments/page.tsx — this used to fire "pasture_signup_started",
-          // an event nothing else ever sent, so it never showed up anywhere.
-          event: "pasture_signup",
+          event: "pasture_signup_started",
           props: { source: "landing_page", variant: "A" },
           color: "bg-accent hover:bg-accent-hover",
         },
         {
           name: "Search Performed",
-          // Matches the "pasture_search_performed" convention used by
-          // journeys.ts — this used to fire "pasture_search", an event
-          // nothing else ever sent, so it never showed up anywhere.
-          event: "pasture_search_performed",
+          event: "pasture_search",
           props: { query: "hedgehog care", results_count: 42 },
           color: "bg-pink hover:bg-pink-hover",
         },
