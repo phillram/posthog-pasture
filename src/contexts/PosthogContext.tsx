@@ -154,6 +154,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       // before identify() — otherwise the default 'identified_only' silently
       // drops $set events on anonymous sessions.
       person_profiles: "always",
+      // No-code (web) experiments are disabled by default in posthog-js.
+      // This sandbox needs them enabled so the Experiments UI can run.
+      disable_web_experiments: false,
       // This is a sandbox — flush events as fast as the SDK allows (minimum 250ms)
       // so captures show up in PostHog's UI with minimal delay. Default is 3s.
       request_queue_config: { flush_interval_ms: 250 },
