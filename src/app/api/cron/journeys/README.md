@@ -6,7 +6,7 @@ If you don't want it: don't deploy `vercel.json`, or remove the `crons` block fr
 
 ## What it does
 
-When triggered, it generates a batch of simulated users running pre-built journey flows (Shopper, Window Shopper, New Signup, Search & Browse, Checkout Abandon, Feature Explorer, Power User by default) and sends the events to PostHog with timestamps spread across the past 24 hours so trend lines look natural rather than spiking.
+When triggered, it generates a batch of simulated users running pre-built journey flows (Shopper, Window Shopper, New Signup, Search & Browse, Checkout Abandon, Feature Explorer, Support Ticket, Power User by default) and sends the events to PostHog with timestamps spread across the past 24 hours so trend lines look natural rather than spiking.
 
 ## Setup (Vercel)
 

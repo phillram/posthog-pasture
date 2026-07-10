@@ -27,6 +27,7 @@ export const CRON_JOURNEY_CONFIG: CronJourneyConfig = {
     "search_and_browse",
     "checkout_abandon",
     "feature_explorer",
+    "support_ticket",
     "power_user",
   ],
   userCount: 50,
