@@ -15,7 +15,7 @@ import {
   buildProtocolMarkerEvent,
   type ProfilePreset,
 } from "@/lib/simulatedUsers";
-import { TIMING_MODES, pickSessionStart, makeTimestamper, type TimingMode } from "@/lib/timing";
+import { TIMING_MODES, planSessionTimestamps, type TimingMode } from "@/lib/timing";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -127,7 +127,6 @@ export default function JourneysPage() {
         username,
         flow,
         personProps: buildPersonProps(preset, username),
-        sessionStart: pickSessionStart(now, timingMode, i),
         flagsByName: {} as Record<string, boolean | string>,
       };
     });
@@ -176,8 +175,23 @@ export default function JourneysPage() {
 
     for (let i = 0; i < userCount; i++) {
       const entry = plan[i];
-      const { username, flow, personProps, sessionStart, flagsByName } = entry;
-      const tsAt = makeTimestamper(sessionStart, timingMode);
+      const { username, flow, personProps, flagsByName } = entry;
+
+      // Feature flag exposures
+      const flagEntries: [string, boolean | string][] = Object.entries(flagsByName);
+      const exposedFlags =
+        flagMode === "all"
+          ? flagEntries
+          : flagToBind && flagToBind in flagsByName
+            ? [[flagToBind, flagsByName[flagToBind]] as [string, boolean | string]]
+            : [];
+
+      // $identify + the protocol marker + one event per exposed flag + the flow.
+      const plannedEventCount = 2 + exposedFlags.length + flow.steps.length;
+      const stamps = planSessionTimestamps(now, timingMode, i, plannedEventCount);
+      let stampIndex = 0;
+      const tsAt = () => stamps[stampIndex++];
+
       let eventCount = 0;
       const commonJourneyProps = {
         pasture_journey_flow: flow.id,
@@ -204,14 +218,6 @@ export default function JourneysPage() {
       bumpCount("$set");
       eventCount++;
 
-      // Feature flag exposures
-      const flagEntries: [string, boolean | string][] = Object.entries(flagsByName);
-      const exposedFlags =
-        flagMode === "all"
-          ? flagEntries
-          : flagToBind && flagToBind in flagsByName
-            ? [[flagToBind, flagsByName[flagToBind]] as [string, boolean | string]]
-            : [];
 
       for (const [flagName, flagValue] of exposedFlags) {
         batchEvents.push({

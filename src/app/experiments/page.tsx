@@ -15,7 +15,7 @@ import {
   buildProtocolMarkerEvent,
   randomProfilePreset,
 } from "@/lib/simulatedUsers";
-import { TIMING_MODES, pickSessionStart, makeTimestamper, type TimingMode } from "@/lib/timing";
+import { TIMING_MODES, planSessionTimestamps, type TimingMode } from "@/lib/timing";
 
 // ── Conversion actions ────────────────────────────────────────────────────────
 
@@ -121,13 +121,12 @@ export default function ExperimentsPage() {
     // Pre-generate all usernames and conversion outcomes up front so we can
     // reference them stably across the async decide calls.
     const now = Date.now();
-    const plan: Array<{ username: string; actionCompleted: boolean; sessionStart: number }> = Array.from(
+    const plan: Array<{ username: string; actionCompleted: boolean }> = Array.from(
       { length: userCount },
       (_, i) => ({
         username: generateUsername(i),
         // Determine NOW whether this user will convert — independent of variant
         actionCompleted: Math.random() * 100 < conversionPct,
-        sessionStart: pickSessionStart(now, timingMode, i),
       })
     );
 
@@ -173,9 +172,12 @@ export default function ExperimentsPage() {
     const batchEvents: Record<string, unknown>[] = [];
 
     for (let i = 0; i < userCount; i++) {
-      const { username, actionCompleted, sessionStart } = plan[i];
+      const { username, actionCompleted } = plan[i];
       const variant = String(variants[i]);
-      const tsAt = makeTimestamper(sessionStart, timingMode);
+      // $identify + the protocol marker + the exposure, plus the conversion.
+      const stamps = planSessionTimestamps(now, timingMode, i, actionCompleted ? 4 : 3);
+      let stampIndex = 0;
+      const tsAt = () => stamps[stampIndex++];
 
       // Step 2: Identify the user in PostHog with a full profile (plan,
       // monthly_sessions, …) — the preset is randomised per user so an

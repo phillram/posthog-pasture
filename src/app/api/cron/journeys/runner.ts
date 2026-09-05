@@ -9,7 +9,7 @@ import {
   buildPersonProps,
   buildProtocolMarkerEvent,
 } from "@/lib/simulatedUsers";
-import { pickSessionStart, makeTimestamper } from "@/lib/timing";
+import { planSessionTimestamps } from "@/lib/timing";
 import type { CronJourneyConfig } from "./config";
 
 const DECIDE_CONCURRENCY = 6;
@@ -44,7 +44,6 @@ export async function runJourneyCron({ apiKey, apiHost, config }: RunOptions): P
       username,
       flow,
       personProps: buildPersonProps(config.profilePreset, username),
-      sessionStart: pickSessionStart(now, config.timingMode, i),
       flagsByName: {} as Record<string, boolean | string>,
     };
   });
@@ -82,8 +81,13 @@ export async function runJourneyCron({ apiKey, apiHost, config }: RunOptions): P
   };
 
   for (let i = 0; i < plan.length; i++) {
-    const { username, flow, personProps, sessionStart, flagsByName } = plan[i];
-    const tsAt = makeTimestamper(sessionStart, config.timingMode);
+    const { username, flow, personProps, flagsByName } = plan[i];
+    const exposedFlags = config.flagMode === "all" ? Object.entries(flagsByName) : [];
+    // $identify + the protocol marker + one event per exposed flag + the flow.
+    const eventCount = 2 + exposedFlags.length + flow.steps.length;
+    const stamps = planSessionTimestamps(now, config.timingMode, i, eventCount);
+    let stampIndex = 0;
+    const tsAt = () => stamps[stampIndex++];
     const commonJourneyProps = {
       pasture_journey_flow: flow.id,
       pasture_journey_user_index: i,
@@ -103,20 +107,18 @@ export async function runJourneyCron({ apiKey, apiHost, config }: RunOptions): P
     batchEvents.push(buildProtocolMarkerEvent(username, "pasture_journey", tsAt()));
     bumpEvent("$set");
 
-    if (config.flagMode === "all") {
-      for (const [flagName, flagValue] of Object.entries(flagsByName)) {
-        batchEvents.push({
-          event: "$feature_flag_called",
-          distinct_id: username,
-          timestamp: tsAt(),
-          properties: {
-            $feature_flag: flagName,
-            $feature_flag_response: flagValue,
-            ...commonJourneyProps,
-          },
-        });
-        bumpEvent("$feature_flag_called");
-      }
+    for (const [flagName, flagValue] of exposedFlags) {
+      batchEvents.push({
+        event: "$feature_flag_called",
+        distinct_id: username,
+        timestamp: tsAt(),
+        properties: {
+          $feature_flag: flagName,
+          $feature_flag_response: flagValue,
+          ...commonJourneyProps,
+        },
+      });
+      bumpEvent("$feature_flag_called");
     }
 
     for (const fStep of flow.steps) {
