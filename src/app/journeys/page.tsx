@@ -13,13 +13,14 @@ import {
   generateUsername,
   buildPersonProps,
   buildProtocolMarkerEvent,
+  newSessionId,
+  flagAttributionProps,
   type ProfilePreset,
 } from "@/lib/simulatedUsers";
 import { TIMING_MODES, planSessionTimestamps, type TimingMode } from "@/lib/timing";
+import { BatchSendError, fetchFlagsForUsers, sendEventBatch } from "@/lib/posthogIngest";
 
 // ── Constants ────────────────────────────────────────────────────────────────
-
-const DECIDE_CONCURRENCY = 6;
 
 const QUICK_USER_COUNTS = [10, 25, 50, 100, 200, 500];
 
@@ -131,37 +132,19 @@ export default function JourneysPage() {
       };
     });
 
-    // ── Phase 1: /decide for each user ──
-    const decideUrl = `${config.apiHost}/decide?v=3`;
-    let evaluated = 0;
-    for (let i = 0; i < userCount; i += DECIDE_CONCURRENCY) {
-      const chunk = plan.slice(i, i + DECIDE_CONCURRENCY);
-      await Promise.all(
-        chunk.map(async (entry) => {
-          try {
-            const res = await fetch(decideUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                token: config.apiKey,
-                distinct_id: entry.username,
-                groups: {},
-              }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              entry.flagsByName = data.featureFlags ?? {};
-            }
-          } catch {
-            // Leave flagsByName empty for this user
-          }
-        })
-      );
-      evaluated = Math.min(i + DECIDE_CONCURRENCY, userCount);
-      setProgress(Math.round((evaluated / userCount) * 60)); // 0–60%
-      setProgressLabel(`Evaluating flags… (${evaluated}/${userCount})`);
-      await new Promise((r) => setTimeout(r, 0));
-    }
+    // ── Phase 1: ask PostHog which flags apply to each user ──
+    setProgressLabel(`Evaluating flags… (0/${userCount})`);
+    const flagsPerUser = await fetchFlagsForUsers(
+      plan.map((entry) => entry.username),
+      config,
+      (done, total) => {
+        setProgress(Math.round((done / total) * 50)); // 0–50%
+        setProgressLabel(`Evaluating flags… (${done}/${total})`);
+      }
+    );
+    flagsPerUser.forEach((flags, i) => {
+      plan[i].flagsByName = flags;
+    });
 
     // ── Phase 2: build batch ──
     setProgressLabel("Building event batch…");
@@ -196,6 +179,12 @@ export default function JourneysPage() {
       const commonJourneyProps = {
         pasture_journey_flow: flow.id,
         pasture_journey_user_index: i,
+        // One session ID for the whole journey, so PostHog reads it as one
+        // session instead of a dozen unrelated ones.
+        $session_id: newSessionId(),
+        // $feature/<key> is what PostHog reads to attribute an event to a
+        // variant, so funnels can be broken down by flag.
+        ...flagAttributionProps(Object.fromEntries(exposedFlags)),
       };
 
       // Identify with the full profile…
@@ -260,26 +249,23 @@ export default function JourneysPage() {
       });
     }
 
-    setProgress(80);
-    setProgressLabel("Sending batch to PostHog…");
+    setProgress(55);
+    setProgressLabel(`Sending ${batchEvents.length} events to PostHog…`);
     await new Promise((r) => setTimeout(r, 0));
 
-    // ── Phase 3: send batch ──
+    // ── Phase 3: send the events, in chunks ──
     try {
-      const res = await fetch(`${config.apiHost}/batch/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          api_key: config.apiKey,
-          batch: batchEvents,
-          sent_at: new Date().toISOString(),
-        }),
+      await sendEventBatch(batchEvents, config, (sent, total) => {
+        setProgress(55 + Math.round((sent / total) * 45));
+        setProgressLabel(`Sending events to PostHog… (${sent}/${total})`);
       });
-      if (!res.ok) {
-        setRunError(`PostHog returned HTTP ${res.status}. Check your API key and host.`);
-      }
     } catch (err) {
-      setRunError(`Network error sending batch: ${(err as Error).message}`);
+      const failure = err as BatchSendError;
+      setRunError(
+        failure.sentEvents > 0
+          ? `${failure.message}. ${failure.sentEvents} of ${failure.totalEvents} events reached PostHog.`
+          : failure.message
+      );
     }
 
     setProgress(100);

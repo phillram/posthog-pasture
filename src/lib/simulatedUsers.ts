@@ -294,3 +294,39 @@ export function buildProtocolMarkerEvent(
     },
   };
 }
+
+// ── Session grouping ─────────────────────────────────────────────────────────
+
+/**
+ * A UUID for `$session_id`. Without it PostHog treats every batched event as
+ * its own session, so session duration, paths, and "events per session" all
+ * read wrong for simulated users. Give one ID to every event of one user's run.
+ */
+export function newSessionId(): string {
+  return crypto.randomUUID();
+}
+
+// ── Feature flag properties ──────────────────────────────────────────────────
+
+/**
+ * The properties an event needs for PostHog to attribute it to a variant.
+ *
+ * `$feature/<key>` is what experiment analysis reads on a conversion event.
+ * `$feature_flag` and `$feature_flag_response` belong on the `$feature_flag_called`
+ * exposure event. Sending only the exposure pair on a conversion event, as the
+ * Experiments page used to, leaves the conversion unattributed.
+ */
+export function flagExposureProps(flagKey: string, value: boolean | string): Record<string, unknown> {
+  return {
+    [`$feature/${flagKey}`]: value,
+    $feature_flag: flagKey,
+    $feature_flag_response: value,
+  };
+}
+
+/** Only the `$feature/<key>` property, for events that are not exposures. */
+export function flagAttributionProps(flags: Record<string, boolean | string>): Record<string, unknown> {
+  const props: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(flags)) props[`$feature/${key}`] = value;
+  return props;
+}
