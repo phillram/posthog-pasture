@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -81,15 +81,13 @@ export default function ExperimentsPage() {
   // Toast
   const { toasts, showToast } = useToast();
 
-  if (isLoading) return null;
-  if (!isAuthenticated) {
-    router.push("/login");
-    return null;
-  }
-  if (!config.apiKey) {
-    router.push("/");
-    return null;
-  }
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) router.push("/login");
+    else if (!config.apiKey) router.push("/");
+  }, [isAuthenticated, isLoading, config.apiKey, router]);
+
+  if (isLoading || !isAuthenticated || !config.apiKey) return null;
 
   // ── Flag classification ──
   const flagNames = Object.keys(featureFlags).sort();

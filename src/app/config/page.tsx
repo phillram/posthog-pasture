@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
 import Navbar from "@/components/Navbar";
 import HedgehogGif from "@/components/HedgehogGif";
+import ApiHostField, { US_CLOUD_HOST } from "@/components/ApiHostField";
 
 export default function ConfigPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -32,6 +33,8 @@ export default function ConfigPage() {
 
   if (isLoading || !isAuthenticated) return null;
 
+  const connectionChanged = apiKey.trim() !== config.apiKey || apiHost.trim() !== config.apiHost;
+
   const handleSaveConnection = () => {
     if (apiKey.trim()) {
       initPosthog(apiKey.trim(), apiHost.trim());
@@ -41,7 +44,7 @@ export default function ConfigPage() {
   const handleFullReset = () => {
     resetConfig();
     setApiKey("");
-    setApiHost("https://us.i.posthog.com");
+    setApiHost(US_CLOUD_HOST);
     router.push("/");
   };
 
@@ -76,30 +79,28 @@ export default function ConfigPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">API Host / Environment</label>
-            <select
-              value={apiHost}
-              onChange={(e) => setApiHost(e.target.value)}
-              className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-            >
-              <option value="https://us.i.posthog.com">US Cloud (us.i.posthog.com)</option>
-              <option value="https://eu.i.posthog.com">EU Cloud (eu.i.posthog.com)</option>
-            </select>
-          </div>
+          <ApiHostField value={apiHost} onChange={setApiHost} />
+
+          {connectionChanged && (
+            <p className="text-warning text-xs">
+              The SDK cannot switch projects in place, so Pasture reloads the page to connect to this one. Your event
+              log survives the reload.
+            </p>
+          )}
 
           <button
             onClick={handleSaveConnection}
-            className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg transition-colors"
+            disabled={!apiKey.trim()}
+            className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save & Reconnect
+            {connectionChanged ? "Save & reconnect" : "Connected"}
           </button>
         </section>
 
         {/* Capture Settings */}
         <section className="bg-card border border-border rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Capture Settings</h2>
-          <p className="text-muted text-xs">These require re-initialization to take effect.</p>
+          <p className="text-muted text-xs">Each change reaches the SDK right away. No reconnect, no page reload.</p>
 
           {[
             {

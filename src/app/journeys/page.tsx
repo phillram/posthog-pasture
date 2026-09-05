@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -76,15 +76,13 @@ export default function JourneysPage() {
 
   const flagNames = useMemo(() => Object.keys(featureFlags).sort(), [featureFlags]);
 
-  if (isLoading) return null;
-  if (!isAuthenticated) {
-    router.push("/login");
-    return null;
-  }
-  if (!config.apiKey) {
-    router.push("/");
-    return null;
-  }
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) router.push("/login");
+    else if (!config.apiKey) router.push("/");
+  }, [isAuthenticated, isLoading, config.apiKey, router]);
+
+  if (isLoading || !isAuthenticated || !config.apiKey) return null;
 
   // Effective flag count for the estimator + downstream emission decisions
   const effectiveFlagCount =
