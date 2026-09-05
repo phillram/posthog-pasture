@@ -174,7 +174,7 @@ export default function ExperimentsPage() {
       // Append the protocol marker as its own `$set` event so the
       // "this user came from the Experiments page" tag stays decoupled from
       // the shared person-profile shape.
-      batchEvents.push(buildProtocolMarkerEvent(username, "pasture_experiment", tsAt()));
+      batchEvents.push(buildProtocolMarkerEvent(username, "pasture_experiment", tsAt(), sessionProps));
 
       // Step 3: Record flag exposure with the variant PostHog assigned
       batchEvents.push({
