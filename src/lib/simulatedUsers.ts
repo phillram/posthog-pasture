@@ -295,6 +295,19 @@ export function buildProtocolMarkerEvent(
   };
 }
 
+/**
+ * Deep link to the PostHog person list, filtered to the users one Pasture
+ * feature created. Every simulated person carries the protocol property, so
+ * this is how a person finds and removes the data a run generated.
+ */
+export function simulatedPersonsUrl(apiHost: string, protocol: PastureProtocol): string {
+  const appHost = apiHost.includes("eu.") ? "https://eu.posthog.com" : "https://us.posthog.com";
+  const filter = {
+    properties: [{ key: protocol, value: ["true"], operator: "exact", type: "person" }],
+  };
+  return `${appHost}/persons?filters=${encodeURIComponent(JSON.stringify(filter))}`;
+}
+
 // ── Session grouping ─────────────────────────────────────────────────────────
 
 /**

@@ -196,6 +196,9 @@ export default function ErrorsPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={throwReal}
+                  aria-label="Throw real JS error"
                   onClick={() => {
                     setThrowReal(!throwReal);
                     showToast(throwReal ? "Real throw disabled" : "Real throw enabled", "info");

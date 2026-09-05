@@ -15,6 +15,7 @@ import {
   buildProtocolMarkerEvent,
   newSessionId,
   flagAttributionProps,
+  simulatedPersonsUrl,
   type ProfilePreset,
 } from "@/lib/simulatedUsers";
 import { TIMING_MODES, planSessionTimestamps, type TimingMode } from "@/lib/timing";
@@ -302,10 +303,9 @@ export default function JourneysPage() {
   };
 
   // ── PostHog persons URL ──
-  const posthogHost = config.apiHost.includes("eu.")
-    ? "https://eu.posthog.com"
-    : "https://us.posthog.com";
-  const personsUrl = `${posthogHost}/persons`;
+  // Filtered to pasture_journey, so the link doubles as the way to find and
+  // remove the persons a run created.
+  const personsUrl = simulatedPersonsUrl(config.apiHost, "pasture_journey");
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -732,7 +732,7 @@ export default function JourneysPage() {
                   rel="noopener noreferrer"
                   className="py-2 px-4 bg-brown/20 hover:bg-brown/30 text-brown-hover font-medium rounded-lg transition-colors text-xs"
                 >
-                  View persons in PostHog →
+                  View these persons in PostHog →
                 </a>
               </div>
               <div className="overflow-x-auto max-h-[480px] overflow-y-auto">

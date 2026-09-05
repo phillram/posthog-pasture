@@ -16,6 +16,7 @@ import {
   randomProfilePreset,
   newSessionId,
   flagExposureProps,
+  simulatedPersonsUrl,
 } from "@/lib/simulatedUsers";
 import { TIMING_MODES, planSessionTimestamps, type TimingMode } from "@/lib/timing";
 import { buildVariantRates, pickControlVariant } from "@/lib/experimentRates";
@@ -247,6 +248,7 @@ export default function ExperimentsPage() {
   // ── PostHog experiment URL ──
   const posthogHost = config.apiHost.includes("eu.") ? "https://eu.posthog.com" : "https://us.posthog.com";
   const experimentUrl = `${posthogHost}/experiments`;
+  const simulatedUsersUrl = simulatedPersonsUrl(config.apiHost, "pasture_experiment");
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -728,14 +730,25 @@ export default function ExperimentsPage() {
             <div className="bg-card border border-warning/30 rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-foreground">User results</h3>
-                <a
-                  href={experimentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2 px-4 bg-warning/20 hover:bg-warning/30 text-warning font-medium rounded-lg transition-colors text-xs"
-                >
-                  View in PostHog →
-                </a>
+                <div className="flex gap-2">
+                  <a
+                    href={simulatedUsersUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Every person this page created, filtered by pasture_experiment. Use it to review or delete them."
+                    className="py-2 px-4 border border-border hover:border-foreground/40 text-foreground/70 hover:text-foreground font-medium rounded-lg transition-colors text-xs"
+                  >
+                    These persons →
+                  </a>
+                  <a
+                    href={experimentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2 px-4 bg-warning/20 hover:bg-warning/30 text-warning font-medium rounded-lg transition-colors text-xs"
+                  >
+                    View in PostHog →
+                  </a>
+                </div>
               </div>
               <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
                 <table className="w-full text-sm">

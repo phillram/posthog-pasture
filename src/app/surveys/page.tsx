@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Survey } from "posthog-js";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,7 @@ import SurveyCard from "@/components/SurveyCard";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
 import { surveyStatus, type SurveyStatus } from "@/lib/surveyStatus";
+import { buildSurveySentProperties, buildSurveyShownProperties } from "@/lib/surveyResponses";
 
 export default function SurveysPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,20 +24,26 @@ export default function SurveysPage() {
 
   const { toasts, showToast } = useToast();
 
-  const loadSurveys = async (quiet = false) => {
-    setSurveyLoading(true);
-    const ph = (await import("posthog-js")).default;
-    ph.getSurveys((s) => {
-      setSurveys(s);
-      setSurveyLoading(false);
-      addLog({
-        type: "event",
-        name: "All Surveys Loaded",
-        properties: { count: s.length, surveys: s.map((sv) => sv.name) },
-      });
-      if (!quiet) showToast(`${s.length} survey${s.length !== 1 ? "s" : ""} loaded`);
-    }, true);
-  };
+  // One loader for the mount-time fetch and the Reload button, so the two
+  // cannot drift. `announce` keeps the automatic load quiet.
+  const loadSurveys = useCallback(
+    async (announce: boolean, isCancelled: () => boolean = () => false) => {
+      setSurveyLoading(true);
+      const ph = (await import("posthog-js")).default;
+      ph.getSurveys((loaded) => {
+        if (isCancelled()) return;
+        setSurveys(loaded);
+        setSurveyLoading(false);
+        addLog({
+          type: "event",
+          name: "All Surveys Loaded",
+          properties: { count: loaded.length, surveys: loaded.map((sv) => sv.name) },
+        });
+        if (announce) showToast(`${loaded.length} survey${loaded.length !== 1 ? "s" : ""} loaded`);
+      }, true);
+    },
+    [addLog, showToast]
+  );
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -48,24 +55,12 @@ export default function SurveysPage() {
   useEffect(() => {
     if (!isInitialized) return;
     let cancelled = false;
-    (async () => {
-      const ph = (await import("posthog-js")).default;
-      setSurveyLoading(true);
-      ph.getSurveys((s) => {
-        if (cancelled) return;
-        setSurveys(s);
-        setSurveyLoading(false);
-        addLog({
-          type: "event",
-          name: "All Surveys Loaded",
-          properties: { count: s.length, surveys: s.map((sv) => sv.name) },
-        });
-      }, true);
-    })();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadSurveys(false, () => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [isInitialized, addLog]);
+  }, [isInitialized, loadSurveys]);
 
   const visibleSurveys = useMemo(() => {
     const filtered = showAllStatuses ? surveys : surveys.filter((s) => surveyStatus(s) === "running");
@@ -132,7 +127,7 @@ export default function SurveysPage() {
                   {showAllStatuses ? "Running Only" : "Show All Statuses"}
                 </button>
                 <button
-                  onClick={() => loadSurveys()}
+                  onClick={() => loadSurveys(true)}
                   className="py-2.5 px-4 bg-pink/20 hover:bg-pink/30 text-pink font-medium rounded-lg transition-colors text-sm"
                 >
                   {surveyLoading ? "Loading..." : "Reload Surveys"}
@@ -163,14 +158,12 @@ export default function SurveysPage() {
                       showToast(`Survey "${s.name}" triggered`);
                     }}
                     onSubmit={(s, responses) => {
-                      const payload: Record<string, unknown> = {
-                        $survey_id: s.id,
-                        $survey_name: s.name,
-                      };
-                      responses.forEach((value, idx) => {
-                        payload[`$survey_response_${idx}`] = value;
-                      });
-                      captureEvent("survey sent", payload);
+                      // One submission ID ties the two events together, and
+                      // "survey shown" has to land first or PostHog reads the
+                      // shown-to-sent rate as 0%.
+                      const submissionId = crypto.randomUUID();
+                      captureEvent("survey shown", buildSurveyShownProperties(s, submissionId));
+                      captureEvent("survey sent", buildSurveySentProperties(s, responses, submissionId));
                       showToast(`Response submitted for "${s.name}"`);
                     }}
                   />

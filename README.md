@@ -17,7 +17,7 @@ Custom events fired from Pasture all start with `pasture_` (e.g. `pasture_purcha
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) v18 or later
+- [Node.js](https://nodejs.org/) v20 or later
 - A PostHog account with a Project API Key — find it in PostHog → Settings → Project Details
 
 ---
@@ -36,11 +36,19 @@ npm run build
 npm start
 ```
 
+### Checks
+
+```bash
+npm run lint       # ESLint, with the Next.js config
+npm run typecheck  # tsc --noEmit
+npm test           # Vitest, over the pure modules in src/lib
+```
+
 ---
 
 ## Setup & Login
 
-On first load you land on the Setup page. Paste your Project API Key, choose your API host (US or EU Cloud), and click Connect & Continue.
+On first load you land on the Setup page. Paste your Project API Key, choose your API host (US Cloud, EU Cloud, or your own self-hosted instance or reverse proxy), and click Connect & Continue.
 
 Then log in with any username + password `test`, continue as a guest, or register a new account. Registration and login both have an "Apply feature flags" toggle — turn it on if you want flag evaluations to be logged at login.
 
@@ -60,7 +68,7 @@ Each page is themed in its own colour so you can see at a glance which area you'
 The main workspace. Two sections:
 
 - **Quick Events** — one-click buttons that fire common event types (purchase, signup, error, pageview, session recording start/stop, etc.). Hover any button for a tooltip showing what it sends.
-- **Sandboxes** — run arbitrary JavaScript in an expression sandbox, or run any PostHog SDK command from an in-page console with quick-command buttons and a reusable history.
+- **Sandboxes** — run arbitrary JavaScript in an expression sandbox, or run any PostHog SDK command from an in-page console with quick-command buttons and a reusable history. The JS sandbox sends the code you ran to PostHog. Sending the *result* is a separate toggle, off by default, because an expression can read cookies or localStorage.
 
 ### Identify
 
@@ -73,7 +81,7 @@ Below the profile, manage who you are to PostHog: identify the current user with
 Two sections:
 
 - **Event Tracking** — send any custom event name with freeform JSON properties, and manage super properties (register, unregister, inspect).
-- **Event Reference** — a browsable catalogue of every PostHog event type, grouped into collapsible categories. Each entry has a description, a code example, and a Fire Event button to send a live demo.
+- **Event Reference** — a browsable catalogue of every PostHog event type, grouped into collapsible categories. Each entry has a description, a code example, and a Fire Event button to send a live demo. Demo events are named `pasture_demo_*` so they never mix with your real event names, and the Groups entry calls `posthog.group()` rather than sending an event.
 
 ### Errors
 
@@ -101,11 +109,13 @@ If the flag list stays empty after a few seconds, an ad blocker or privacy exten
 
 A wizard that generates realistic experiment data in your PostHog project using simulated users. Each simulated user gets their own distinct ID so your own session is never affected.
 
-Walk through five steps: pick a feature flag, choose how many simulated users to generate, set a conversion rate, pick a conversion action, and choose an event-timing spread (Burst through Past 30 days) so trend lines look natural rather than spiking at the moment of the run.
+Walk through five steps: pick a feature flag, choose how many simulated users to generate, set the conversion rates, pick a conversion action, and choose an event-timing spread (Burst through Past 30 days) so trend lines look natural rather than spiking at the moment of the run.
+
+Conversion takes two numbers: a baseline for the control variant, and a lift for the test variants. Control at 20% with a +25% lift gives a test variant that converts at 25%, so PostHog has a real difference to measure. Set the lift to 0% for a deliberate null result, or below 0% for a test variant that loses.
 
 Every simulated person is identified with a full profile (name, email, country, signup date, plan tier) and tagged with a `pasture_experiment: true` person property so you can filter for users created by this page in PostHog. The plan tier is randomised per user so a run produces a realistic mix of personas.
 
-The results view shows totals, conversion rate, a per-variant breakdown, and a table of every simulated user with their assigned variant and conversion status. There's also a direct "View in PostHog →" link to the experiments dashboard.
+The results view shows totals, conversion rate, a per-variant breakdown that marks the control and each variant's lift against it, and a table of every simulated user with their assigned variant and conversion status. Two links go to PostHog: the experiments dashboard, and the person list filtered to the users this page created, which is how you clean them up afterwards.
 
 ### Journeys
 
@@ -115,20 +125,23 @@ Each simulated user gets a randomly-generated identity, has feature flags fetche
 
 Every simulated person is identified with the same full profile shape used by Experiments (name, email, country, signup date, plan tier) and tagged with a `pasture_journey: true` person property so you can filter for users created by this page in PostHog.
 
-An **Event timing** picker controls how event timestamps are spread. Burst keeps every event close to "now" with tiny gaps (good for a quick test). Past hour, Past day, Past 5 / 10 / 15 / 30 days each spread session start times back into that window and randomise the per-event gap, so trend lines and funnels show natural curves instead of one tall spike. All spread is into the past — PostHog rejects timestamps far in the future.
+An **Event timing** picker controls how event timestamps are spread. Burst keeps every event close to "now" with tiny gaps (good for a quick test). Past hour, Past day, Past 5 / 10 / 15 / 30 days each start the session somewhere inside that window and spread the events across an uneven set of gaps, so trend lines and funnels show natural curves instead of one tall spike. Every timestamp lands at or before now, whatever the flow length or flag count, because PostHog rejects timestamps far in the future.
 
-The results view shows total users, total events sent, a flow breakdown, a per-event tally, and a per-user table. A "View persons in PostHog →" link jumps you to the persons dashboard.
+The results view shows total users, total events sent, a flow breakdown, a per-event tally, and a per-user table. A "View these persons in PostHog →" link opens the person list filtered to `pasture_journey`, which is also how you remove the data a run created.
+
+Every event from one simulated user shares a `$session_id`, so PostHog reads the journey as one session.
 
 ### Surveys
 
-Auto-loads the surveys from your PostHog project on arrival. By default only Running surveys are shown, sorted alphabetically. Flip "Show all statuses" to also see drafts, scheduled, and completed surveys. A status breakdown across the top shows how many of each you have. Reload Surveys refetches from PostHog.
+Auto-loads the surveys from your PostHog project on arrival. By default only Running surveys are shown, grouped by status and sorted alphabetically inside each group. Flip "Show all statuses" to also see drafts, scheduled, and completed surveys. A status breakdown across the top shows how many of each you have. Reload Surveys refetches from PostHog.
 
-Each survey card shows its name with a coloured status badge (Draft / Scheduled / Running / Completed) and:
+Each survey card shows its name with a coloured status badge (Draft / Running / Complete) and:
 
-- **Trigger** — render the survey as it would appear in a real in-product popover
-- **Dismiss** — fire a dismissal event
+- **Trigger** — for popover surveys, render the survey as it would appear in a real in-product popover
 - For API-type surveys, a full inline form (open text, ratings, single/multi choice, links) with a Submit button
 - An expandable **Targeting conditions** panel showing the URL, selector, events, and linked flag that control when the survey matches
+
+Submitting the inline form sends a `survey shown` event and then a `survey sent` event, both with the same `$survey_submission_id`, and keys each answer the way PostHog reads it. The answers show up in the survey's results in PostHog.
 
 ### Event Log
 
@@ -138,12 +151,12 @@ Filter by type, search by name or properties, export with Copy JSON or Download 
 
 ### Config
 
-- **Connection** — view status, change API key, switch US / EU cloud, save & reconnect
+- **Connection** — view status, change API key, switch between US Cloud, EU Cloud, and a custom host, save & reconnect
 - **Capture Settings** — toggle autocapture, pageview capture, pageleave capture, session recording
 - **Privacy & Consent** — opt in / opt out of event capturing
 - **Danger Zone** — reset person data (new anonymous ID) or a full reset that disconnects and clears everything
 
-> Capture Settings changes take effect after Save & Reconnect.
+> Capture Settings apply the moment you flip them. Changing the API key or host reloads the page, because posthog-js cannot repoint a loaded SDK at a different project.
 
 ---
 

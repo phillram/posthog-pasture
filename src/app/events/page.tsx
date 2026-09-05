@@ -13,9 +13,19 @@ import HedgehogGif from "@/components/HedgehogGif";
 interface EventTypeInfo {
   category: string;
   events: {
+    /** The SDK method or event name this card documents. */
     name: string;
     description: string;
     code: string;
+    /**
+     * Event name to send when the person clicks "Fire Event". Needed because
+     * `name` is often an SDK method, not an event: firing `capture` or `group`
+     * as an event name put junk into the project's event taxonomy, and the
+     * `group` card never called posthog.group() at all.
+     */
+    fireAs?: string;
+    /** What the button does, when it is not a plain capture. */
+    fireAction?: "captureException" | "groupIdentify";
     properties?: Record<string, unknown>;
   }[];
 }
@@ -29,6 +39,7 @@ const eventTypes: EventTypeInfo[] = [
         description:
           "Send any custom event with optional properties. This is the most flexible event type — use it for tracking user actions, feature usage, conversions, etc.",
         code: `posthog.capture('event_name', {\n  property_key: 'value',\n  numeric_prop: 42\n})`,
+        fireAs: "pasture_demo_capture",
         properties: { action: "demo_capture", source: "event_reference" },
       },
       {
@@ -36,6 +47,7 @@ const eventTypes: EventTypeInfo[] = [
         description:
           "Capture an event while also setting person properties in the same call. The $set properties persist on the person.",
         code: `posthog.capture('event_name', {\n  $set: { plan: 'premium', role: 'admin' }\n})`,
+        fireAs: "pasture_demo_capture_with_set",
         properties: { $set: { demo_property: "set_via_event" } },
       },
       {
@@ -43,6 +55,7 @@ const eventTypes: EventTypeInfo[] = [
         description:
           "Like $set, but only sets properties if they haven't been set before. Useful for first-touch attribution.",
         code: `posthog.capture('event_name', {\n  $set_once: { initial_referrer: 'google.com' }\n})`,
+        fireAs: "pasture_demo_capture_with_set_once",
         properties: { $set_once: { first_seen_page: "event_reference" } },
       },
     ],
@@ -55,18 +68,21 @@ const eventTypes: EventTypeInfo[] = [
         description:
           "Track page views. Automatically captured if capture_pageview is enabled, but can also be sent manually for SPAs.",
         code: `posthog.capture('$pageview')`,
+        fireAs: "$pageview",
         properties: { $current_url: "/events" },
       },
       {
         name: "$pageleave",
         description: "Track when users leave a page. Automatically captured if capture_pageleave is enabled.",
         code: `posthog.capture('$pageleave')`,
+        fireAs: "$pageleave",
         properties: { $current_url: "/events" },
       },
       {
         name: "$screen",
         description: "Track screen views in mobile apps (or used as a virtual screen view in web SPAs).",
         code: `posthog.capture('$screen', {\n  $screen_name: 'Settings'\n})`,
+        fireAs: "$screen",
         properties: { $screen_name: "Event Reference" },
       },
     ],
@@ -117,7 +133,8 @@ const eventTypes: EventTypeInfo[] = [
         description:
           "Associate the current user with a group. Groups allow analyzing at the organization/team level rather than individual.",
         code: `posthog.group('company', 'company_123', {\n  name: 'Acme Corp',\n  industry: 'Tech'\n})`,
-        properties: { company: "demo_company" },
+        fireAction: "groupIdentify",
+        properties: { groupType: "company", groupKey: "pasture_demo_company", name: "Pasture Demo Co" },
       },
     ],
   },
@@ -150,8 +167,8 @@ const eventTypes: EventTypeInfo[] = [
         description:
           "Capture exceptions/errors. PostHog requires $exception_list (array of exception objects). Each entry needs type, value, and mechanism fields.",
         code: `posthog.capture('$exception', {\n  $exception_message: 'Something broke',\n  $exception_type: 'TypeError',\n  $exception_source: 'checkout.js',\n  $exception_lineno: 42,\n  $exception_list: [{\n    type: 'TypeError',\n    value: 'Something broke',\n    mechanism: { handled: true, type: 'generic' }\n  }]\n})`,
+        fireAction: "captureException",
         properties: {
-          __use_capture_exception: true,
           message: "Demo exception from Event Reference",
           type: "DemoError",
           source: "event_reference_page",
@@ -181,6 +198,7 @@ const eventTypes: EventTypeInfo[] = [
         name: "$feature_flag_called",
         description: "Automatically captured when you evaluate a feature flag. Used for experiment result analysis.",
         code: `// Auto-captured when calling:\nposthog.isFeatureEnabled('my-flag')`,
+        fireAs: "$feature_flag_called",
         properties: {
           $feature_flag: "demo-flag",
           $feature_flag_response: true,
@@ -241,8 +259,15 @@ const categoryColors: Record<string, string> = {
 
 export default function EventsPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { captureEvent, captureException, registerSuperProperties, unregisterSuperProperty, addLog, isInitialized } =
-    usePosthog();
+  const {
+    captureEvent,
+    captureException,
+    groupIdentify,
+    registerSuperProperties,
+    unregisterSuperProperty,
+    addLog,
+    isInitialized,
+  } = usePosthog();
   const router = useRouter();
 
   // Custom event form
@@ -297,17 +322,26 @@ export default function EventsPage() {
   };
 
   const handleFireEvent = (event: EventTypeInfo["events"][0]) => {
-    if (event.properties && "__use_capture_exception" in event.properties) {
+    const props = event.properties ?? {};
+    if (event.fireAction === "captureException") {
       captureException({
-        message: event.properties.message as string,
-        type: event.properties.type as string,
-        source: (event.properties.source as string) || "event_reference",
+        message: props.message as string,
+        type: props.type as string,
+        source: (props.source as string) || "event_reference",
       });
-    } else if (event.properties) {
-      captureEvent(event.name, event.properties);
-    } else {
-      captureEvent(event.name, { source: "event_reference", demo: true });
+      showToast(`"${event.name}" fired`);
+      return;
     }
+    if (event.fireAction === "groupIdentify") {
+      const { groupType, groupKey, ...groupProps } = props as Record<string, string>;
+      groupIdentify(groupType, groupKey, groupProps);
+      showToast(`Group "${groupType}/${groupKey}" set`);
+      return;
+    }
+    // fireAs is required for a card with a Fire button, so a card can never
+    // send its SDK method name as an event name.
+    captureEvent(event.fireAs!, props);
+    showToast(`"${event.fireAs}" captured`);
   };
 
   return (
@@ -459,7 +493,9 @@ export default function EventsPage() {
           </div>
           <p className="text-muted text-sm mb-4">
             Complete guide to every PostHog event type. Click a category below to expand it, then &quot;Fire Event&quot;
-            to send a demo event.
+            to send a demo event. Demo events are named{" "}
+            <code className="bg-input-bg px-1 rounded font-mono text-xs">pasture_demo_*</code>, so they stay separate
+            from your real event names.
           </p>
         </div>
 
@@ -486,9 +522,14 @@ export default function EventsPage() {
                       <h3 className="text-sm font-semibold text-primary font-mono">{event.name}</h3>
                       <p className="text-sm text-muted mt-1">{event.description}</p>
                     </div>
-                    {event.properties && (
+                    {(event.fireAs || event.fireAction) && (
                       <button
                         onClick={() => handleFireEvent(event)}
+                        title={
+                          event.fireAs
+                            ? `Sends an event named ${event.fireAs}`
+                            : "Calls the SDK method with demo values"
+                        }
                         className="shrink-0 py-1.5 px-4 bg-primary/20 hover:bg-primary/30 text-primary font-medium rounded-lg transition-colors text-xs"
                       >
                         Fire Event

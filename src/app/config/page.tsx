@@ -125,6 +125,10 @@ export default function ConfigPage() {
                 <p className="text-xs text-muted">{desc}</p>
               </div>
               <button
+                type="button"
+                role="switch"
+                aria-checked={config[key]}
+                aria-label={label}
                 onClick={() => updateConfig({ [key]: !config[key] })}
                 className={`relative w-10 h-5 rounded-full transition-colors ${config[key] ? "bg-success" : "bg-muted/30"}`}
               >
@@ -141,6 +145,10 @@ export default function ConfigPage() {
               <p className="text-xs text-muted">Prevent session recording from starting</p>
             </div>
             <button
+              type="button"
+              role="switch"
+              aria-checked={config.disableSessionRecording}
+              aria-label="Disable session recording"
               onClick={() => updateConfig({ disableSessionRecording: !config.disableSessionRecording })}
               className={`relative w-10 h-5 rounded-full transition-colors ${config.disableSessionRecording ? "bg-error" : "bg-muted/30"}`}
             >
