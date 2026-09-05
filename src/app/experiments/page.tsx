@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -14,8 +14,13 @@ import {
   buildPersonProps,
   buildProtocolMarkerEvent,
   randomProfilePreset,
+  newSessionId,
+  flagExposureProps,
+  simulatedPersonsUrl,
 } from "@/lib/simulatedUsers";
-import { TIMING_MODES, pickSessionStart, makeTimestamper, type TimingMode } from "@/lib/timing";
+import { TIMING_MODES, planSessionTimestamps, type TimingMode } from "@/lib/timing";
+import { buildVariantRates, pickControlVariant } from "@/lib/experimentRates";
+import { BatchSendError, fetchFlagsForUsers, sendEventBatch } from "@/lib/posthogIngest";
 
 // ── Conversion actions ────────────────────────────────────────────────────────
 
@@ -45,9 +50,6 @@ interface ExperimentUser {
 
 type WizardStep = "configure" | "running" | "results";
 
-// How many /decide calls to fire in parallel (browser allows ~6 per domain)
-const DECIDE_CONCURRENCY = 6;
-
 export default function ExperimentsPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { featureFlags, flagsReady, isInitialized, captureEvent, config } = usePosthog();
@@ -66,8 +68,10 @@ export default function ExperimentsPage() {
   // Step 3: conversion action
   const [selectedAction, setSelectedAction] = useState(CONVERSION_ACTIONS[0].event);
 
-  // Step 4: conversion % — randomised on mount
-  const [conversionPct, setConversionPct] = useState(() => Math.floor(Math.random() * 100) + 1);
+  // Step 4: baseline conversion % for the control variant
+  const [conversionPct, setConversionPct] = useState(20);
+  // How much better the test variant converts, as a relative percentage.
+  const [variantLiftPct, setVariantLiftPct] = useState(25);
 
   // Step 5: timing spread
   const [timingMode, setTimingMode] = useState<TimingMode>("burst");
@@ -81,15 +85,13 @@ export default function ExperimentsPage() {
   // Toast
   const { toasts, showToast } = useToast();
 
-  if (isLoading) return null;
-  if (!isAuthenticated) {
-    router.push("/login");
-    return null;
-  }
-  if (!config.apiKey) {
-    router.push("/");
-    return null;
-  }
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) router.push("/login");
+    else if (!config.apiKey) router.push("/");
+  }, [isAuthenticated, isLoading, config.apiKey, router]);
+
+  if (isLoading || !isAuthenticated || !config.apiKey) return null;
 
   // ── Flag classification ──
   const flagNames = Object.keys(featureFlags).sort();
@@ -116,68 +118,45 @@ export default function ExperimentsPage() {
       user_count: userCount,
       conversion_action: selectedAction,
       conversion_pct: conversionPct,
+      variant_lift_pct: variantLiftPct,
       timing_mode: timingMode,
       triggered_by: user?.id,
     });
 
-    // Pre-generate all usernames and conversion outcomes up front so we can
-    // reference them stably across the async decide calls.
     const now = Date.now();
-    const plan: Array<{ username: string; actionCompleted: boolean; sessionStart: number }> = Array.from(
-      { length: userCount },
-      (_, i) => ({
-        username: generateUsername(i),
-        // Determine NOW whether this user will convert — independent of variant
-        actionCompleted: Math.random() * 100 < conversionPct,
-        sessionStart: pickSessionStart(now, timingMode, i),
-      })
-    );
+    const usernames = Array.from({ length: userCount }, (_, i) => generateUsername(i));
 
-    // ── Phase 1: Call /decide for each user to get their actual flag variant ──
-    // PostHog evaluates the rollout rules against the distinct_id — this is the
-    // real assignment, not something we pick ourselves.
-    const variants: (string | boolean)[] = new Array(userCount).fill(false);
-    const decideUrl = `${config.apiHost}/decide?v=3`;
-
-    let evaluated = 0;
-    for (let i = 0; i < userCount; i += DECIDE_CONCURRENCY) {
-      const chunk = plan.slice(i, i + DECIDE_CONCURRENCY);
-      await Promise.all(
-        chunk.map(async ({ username }, j) => {
-          try {
-            const res = await fetch(decideUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                token: config.apiKey,
-                distinct_id: username,
-                groups: {},
-              }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              variants[i + j] = data.featureFlags?.[selectedFlag] ?? false;
-            }
-          } catch {
-            // If decide fails for a user, keep false (flag off)
-          }
-        })
-      );
-      evaluated = Math.min(i + DECIDE_CONCURRENCY, userCount);
-      setProgress(Math.round((evaluated / userCount) * 70)); // 0–70% = decide phase
-      setProgressLabel(`Evaluating flags… (${evaluated}/${userCount})`);
-      await new Promise((r) => setTimeout(r, 0)); // yield to React
-    }
+    // ── Phase 1: ask PostHog which variant each user gets ──
+    // PostHog evaluates the rollout rules against the distinct_id, so this is
+    // the real assignment rather than something the sandbox picks.
+    setProgressLabel(`Evaluating flags… (0/${userCount})`);
+    const flagsPerUser = await fetchFlagsForUsers(usernames, config, (done, total) => {
+      setProgress(Math.round((done / total) * 60)); // 0–60% = flag phase
+      setProgressLabel(`Evaluating flags… (${done}/${total})`);
+    });
+    const variants = flagsPerUser.map((flags) => flags[selectedFlag] ?? false);
 
     // ── Phase 2: Build the batch payload ──
     setProgressLabel("Building event batch…");
     const generated: ExperimentUser[] = [];
     const batchEvents: Record<string, unknown>[] = [];
 
+    // Conversion is decided per variant, not once for the whole run. With a
+    // single rate every variant converts at the same rate by construction, so
+    // PostHog could never call a winner on generated data.
+    const rateForVariant = buildVariantRates(variants, conversionPct, variantLiftPct);
+
     for (let i = 0; i < userCount; i++) {
-      const { username, actionCompleted, sessionStart } = plan[i];
+      const username = usernames[i];
       const variant = String(variants[i]);
-      const tsAt = makeTimestamper(sessionStart, timingMode);
+      const actionCompleted = Math.random() * 100 < rateForVariant(variant);
+      // $identify + the protocol marker + the exposure, plus the conversion.
+      const stamps = planSessionTimestamps(now, timingMode, i, actionCompleted ? 4 : 3);
+      let stampIndex = 0;
+      const tsAt = () => stamps[stampIndex++];
+      // One session ID per user, so PostHog groups the run as one session
+      // instead of four unrelated ones.
+      const sessionProps = { $session_id: newSessionId() };
 
       // Step 2: Identify the user in PostHog with a full profile (plan,
       // monthly_sessions, …) — the preset is randomised per user so an
@@ -188,6 +167,7 @@ export default function ExperimentsPage() {
         timestamp: tsAt(),
         properties: {
           $set: buildPersonProps(randomProfilePreset(), username),
+          ...sessionProps,
         },
       });
 
@@ -201,10 +181,7 @@ export default function ExperimentsPage() {
         event: "$feature_flag_called",
         distinct_id: username,
         timestamp: tsAt(),
-        properties: {
-          $feature_flag: selectedFlag,
-          $feature_flag_response: variants[i],
-        },
+        properties: { ...flagExposureProps(selectedFlag, variants[i]), ...sessionProps },
       });
 
       // Step 4: Fire the conversion event for users who convert
@@ -221,8 +198,10 @@ export default function ExperimentsPage() {
           properties: {
             ...conversionProps,
             experiment_flag: selectedFlag,
-            $feature_flag: selectedFlag,
-            $feature_flag_response: variants[i],
+            // $feature/<key> is the property experiment analysis reads on a
+            // conversion event. Without it the conversion has no variant.
+            ...flagExposureProps(selectedFlag, variants[i]),
+            ...sessionProps,
           },
         });
       }
@@ -230,27 +209,24 @@ export default function ExperimentsPage() {
       generated.push({ username, variant, actionCompleted });
     }
 
-    setProgress(80);
-    setProgressLabel("Sending batch to PostHog…");
+    setProgress(65);
+    setProgressLabel(`Sending ${batchEvents.length} events to PostHog…`);
     await new Promise((r) => setTimeout(r, 0));
 
-    // ── Phase 3: Send all events in a single batch request ──
+    // ── Phase 3: Send the events, in chunks ──
     // Each event has its own distinct_id — the real logged-in session is never touched.
     try {
-      const res = await fetch(`${config.apiHost}/batch/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          api_key: config.apiKey,
-          batch: batchEvents,
-          sent_at: new Date().toISOString(),
-        }),
+      await sendEventBatch(batchEvents, config, (sent, total) => {
+        setProgress(65 + Math.round((sent / total) * 35));
+        setProgressLabel(`Sending events to PostHog… (${sent}/${total})`);
       });
-      if (!res.ok) {
-        setRunError(`PostHog returned HTTP ${res.status}. Check your API key and host.`);
-      }
     } catch (err) {
-      setRunError(`Network error sending batch: ${(err as Error).message}`);
+      const failure = err as BatchSendError;
+      setRunError(
+        failure.sentEvents > 0
+          ? `${failure.message}. ${failure.sentEvents} of ${failure.totalEvents} events reached PostHog.`
+          : failure.message
+      );
     }
 
     setProgress(100);
@@ -261,6 +237,7 @@ export default function ExperimentsPage() {
       user_count: userCount,
       conversion_action: selectedAction,
       conversion_pct: conversionPct,
+      variant_lift_pct: variantLiftPct,
       converted_count: generated.filter((u) => u.actionCompleted).length,
     });
 
@@ -271,6 +248,7 @@ export default function ExperimentsPage() {
   // ── PostHog experiment URL ──
   const posthogHost = config.apiHost.includes("eu.") ? "https://eu.posthog.com" : "https://us.posthog.com";
   const experimentUrl = `${posthogHost}/experiments`;
+  const simulatedUsersUrl = simulatedPersonsUrl(config.apiHost, "pasture_experiment");
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -431,36 +409,80 @@ export default function ExperimentsPage() {
                 <h2 className="text-base font-semibold text-foreground">Conversion rate</h2>
               </div>
               <p className="text-muted text-xs mb-3 ml-9">
-                Percentage of simulated users who complete the conversion action. Defaults to a random value — override
-                if needed.
+                Control converts at the baseline. Test variants get the lift on top, so PostHog has a real difference
+                to measure. Set the lift to 0% for a null result, or below 0% for a test variant that loses.
               </p>
-              <div className="flex items-center gap-4 ml-9">
-                <div className="flex items-center">
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={conversionPct}
-                    onChange={(e) => setConversionPct(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                    className="w-24 px-4 py-2.5 bg-input-bg border border-warning/30 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
-                  />
-                  <span className="ml-2 text-muted text-sm">%</span>
+              <div className="ml-9 space-y-4">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <label htmlFor="baseline-pct" className="text-sm text-foreground w-32 shrink-0">
+                    Control baseline
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      id="baseline-pct"
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={conversionPct}
+                      onChange={(e) => setConversionPct(Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)))}
+                      className="w-24 px-4 py-2.5 bg-input-bg border border-warning/30 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
+                    />
+                    <span className="ml-2 text-muted text-sm">%</span>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {[5, 10, 25, 50, 75].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setConversionPct(n)}
+                        className={`px-3 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                          conversionPct === n
+                            ? "bg-warning border-warning text-black"
+                            : "bg-warning/10 hover:bg-warning/20 text-warning border-warning/30"
+                        }`}
+                      >
+                        {n}%
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  {[5, 10, 25, 50, 75].map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setConversionPct(n)}
-                      className={`px-3 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
-                        conversionPct === n
-                          ? "bg-warning border-warning text-black"
-                          : "bg-warning/10 hover:bg-warning/20 text-warning border-warning/30"
-                      }`}
-                    >
-                      {n}%
-                    </button>
-                  ))}
+                <div className="flex items-center gap-4 flex-wrap">
+                  <label htmlFor="variant-lift-pct" className="text-sm text-foreground w-32 shrink-0">
+                    Test variant lift
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      id="variant-lift-pct"
+                      type="number"
+                      min={-100}
+                      max={500}
+                      value={variantLiftPct}
+                      onChange={(e) =>
+                        setVariantLiftPct(Math.max(-100, Math.min(500, parseInt(e.target.value, 10) || 0)))
+                      }
+                      className="w-24 px-4 py-2.5 bg-input-bg border border-warning/30 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-warning text-sm font-mono"
+                    />
+                    <span className="ml-2 text-muted text-sm">%</span>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {[-25, 0, 10, 25, 50, 100].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setVariantLiftPct(n)}
+                        className={`px-3 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                          variantLiftPct === n
+                            ? "bg-warning border-warning text-black"
+                            : "bg-warning/10 hover:bg-warning/20 text-warning border-warning/30"
+                        }`}
+                      >
+                        {n > 0 ? `+${n}` : n}%
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                <p className="text-muted text-xs">
+                  Control converts at {conversionPct}%. The top test variant converts at{" "}
+                  {Math.round(Math.min(100, Math.max(0, conversionPct * (1 + variantLiftPct / 100))))}%.
+                </p>
               </div>
             </section>
 
@@ -628,7 +650,8 @@ export default function ExperimentsPage() {
               <span className="text-muted text-sm">Experiment flag:</span>
               <code className="font-mono text-warning font-semibold">{selectedFlag}</code>
               <span className="text-muted text-xs">
-                · {userCount} users · {conversionPct}% target conversion · variants assigned by PostHog
+                · {userCount} users · {conversionPct}% control baseline · {variantLiftPct > 0 ? "+" : ""}
+                {variantLiftPct}% test lift · variants assigned by PostHog
               </span>
             </div>
 
@@ -655,6 +678,13 @@ export default function ExperimentsPage() {
             {/* Per-variant breakdown — dynamic, based on whatever PostHog returned */}
             {(() => {
               const uniqueVariants = [...new Set(results.map((u) => u.variant))].sort();
+              const control = pickControlVariant(uniqueVariants);
+              const rateOf = (variant: string) => {
+                const group = results.filter((u) => u.variant === variant);
+                if (group.length === 0) return null;
+                return (group.filter((u) => u.actionCompleted).length / group.length) * 100;
+              };
+              const controlRate = control ? rateOf(control) : null;
               return (
                 <div className="bg-card border border-warning/30 rounded-xl p-6">
                   <h3 className="text-sm font-semibold text-foreground mb-3">Variant breakdown</h3>
@@ -662,16 +692,31 @@ export default function ExperimentsPage() {
                     {uniqueVariants.map((v) => {
                       const group = results.filter((u) => u.variant === v);
                       const converted = group.filter((u) => u.actionCompleted).length;
+                      const rate = rateOf(v);
+                      const isControl = v === control;
+                      const lift =
+                        !isControl && rate !== null && controlRate ? ((rate - controlRate) / controlRate) * 100 : null;
                       return (
                         <div key={v} className="bg-input-bg border border-warning/20 rounded-lg p-3">
-                          <span className="inline-block font-mono text-sm font-medium px-2 py-0.5 rounded bg-warning/20 text-warning">
-                            {v}
-                          </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-block font-mono text-sm font-medium px-2 py-0.5 rounded bg-warning/20 text-warning">
+                              {v}
+                            </span>
+                            {isControl && (
+                              <span className="text-[10px] uppercase tracking-wide text-muted">control</span>
+                            )}
+                          </div>
                           <p className="text-xs text-muted mt-2">
                             {group.length} users · {converted} converted
                           </p>
                           <p className="text-xs font-semibold text-warning mt-0.5">
-                            {group.length > 0 ? `${Math.round((converted / group.length) * 100)}%` : "—"}
+                            {rate !== null ? `${Math.round(rate)}%` : "—"}
+                            {lift !== null && (
+                              <span className={lift >= 0 ? "text-success ml-2" : "text-error ml-2"}>
+                                {lift >= 0 ? "+" : ""}
+                                {Math.round(lift)}% vs control
+                              </span>
+                            )}
                           </p>
                         </div>
                       );
@@ -685,14 +730,25 @@ export default function ExperimentsPage() {
             <div className="bg-card border border-warning/30 rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-foreground">User results</h3>
-                <a
-                  href={experimentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2 px-4 bg-warning/20 hover:bg-warning/30 text-warning font-medium rounded-lg transition-colors text-xs"
-                >
-                  View in PostHog →
-                </a>
+                <div className="flex gap-2">
+                  <a
+                    href={simulatedUsersUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Every person this page created, filtered by pasture_experiment. Use it to review or delete them."
+                    className="py-2 px-4 border border-border hover:border-foreground/40 text-foreground/70 hover:text-foreground font-medium rounded-lg transition-colors text-xs"
+                  >
+                    These persons →
+                  </a>
+                  <a
+                    href={experimentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2 px-4 bg-warning/20 hover:bg-warning/30 text-warning font-medium rounded-lg transition-colors text-xs"
+                  >
+                    View in PostHog →
+                  </a>
+                </div>
               </div>
               <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
                 <table className="w-full text-sm">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -8,8 +8,6 @@ import Navbar from "@/components/Navbar";
 import HedgehogGif from "@/components/HedgehogGif";
 import ToastStack from "@/components/ToastStack";
 import { useToast } from "@/hooks/useToast";
-
-const OVERRIDES_KEY = "pasture:flag-overrides";
 
 // ── Flag definitions ──
 // hog-spin:   Boolean flag. true = show spinning hedgehog, false = disabled.
@@ -34,90 +32,49 @@ const GIFS = {
   },
 };
 
-const FLAG_KEYS = ["hog-spin", "hog-dance", "hog-action"] as const;
-
 export default function FlagsPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { featureFlags, flagsReady, reloadFeatureFlags, armFlagsReadyLog, addLog, isInitialized, config } = usePosthog();
+  const {
+    featureFlags,
+    flagsReady,
+    flagsFailed,
+    reloadFeatureFlags,
+    armFlagsReadyLog,
+    isInitialized,
+    config,
+    flagOverrides,
+    setFlagOverride,
+    clearFlagOverrides,
+  } = usePosthog();
   const router = useRouter();
 
   const { toasts, showToast } = useToast();
 
-  const [overriddenKeys, setOverriddenKeys] = useState<Set<string>>(new Set());
-
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(OVERRIDES_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) setOverriddenKeys(new Set(parsed.filter((x): x is string => typeof x === "string")));
-    } catch {
-      // ignore malformed sessionStorage entries
-    }
-  }, []);
+    if (isLoading) return;
+    if (!isAuthenticated) router.push("/login");
+    else if (!config.apiKey) router.push("/");
+  }, [isAuthenticated, isLoading, config.apiKey, router]);
 
-  const persistOverrides = (next: Set<string>) => {
-    try {
-      sessionStorage.setItem(OVERRIDES_KEY, JSON.stringify([...next]));
-    } catch {
-      // ignore quota / disabled-storage errors
-    }
-  };
-
-  const markOverride = (key: string) => {
-    setOverriddenKeys((prev) => {
-      const next = new Set(prev);
-      next.add(key);
-      persistOverrides(next);
-      return next;
-    });
-  };
-
-  const clearAllOverrides = () => {
-    setOverriddenKeys(() => {
-      const next = new Set<string>();
-      persistOverrides(next);
-      return next;
-    });
-  };
-
-  if (isLoading) return null;
-  if (!isAuthenticated) {
-    router.push("/login");
-    return null;
-  }
-  if (!config.apiKey) {
-    router.push("/");
-    return null;
-  }
+  if (isLoading || !isAuthenticated || !config.apiKey) return null;
 
   // ── Override helpers ──
+  // The context owns the override map, because posthog-js stores it as one
+  // value. Sending a single key would wipe every other override.
 
-  const overrideFlag = async (key: string, value: boolean | string) => {
-    const ph = (await import("posthog-js")).default;
-    ph.featureFlags.overrideFeatureFlags({ flags: { [key]: value } });
-    markOverride(key);
-    reloadFeatureFlags();
-    addLog({ type: "flag", name: `Flag Override: ${key}`, properties: { flag: key, value } });
+  const overrideFlag = (key: string, value: boolean | string) => {
+    setFlagOverride(key, value);
     showToast(`"${key}" set to ${String(value)}`);
   };
 
-  const toggleProjectFlag = async (key: string, currentValue: boolean | string) => {
-    const ph = (await import("posthog-js")).default;
+  const toggleProjectFlag = (key: string, currentValue: boolean | string) => {
     let next: boolean | string;
     if (typeof currentValue === "boolean") {
       next = !currentValue;
     } else {
       next = currentValue === "control" ? "test" : "control";
     }
-    ph.featureFlags.overrideFeatureFlags({ flags: { [key]: next } });
-    markOverride(key);
-    addLog({
-      type: "flag",
-      name: `Flag ${typeof next === "boolean" ? (next ? "Activated" : "Deactivated") : "Switched"}: ${key}`,
-      properties: { flag: key, from: currentValue, to: next },
-    });
-    reloadFeatureFlags();
+    setFlagOverride(key, next);
     showToast(`"${key}" ${typeof next === "boolean" ? (next ? "activated" : "deactivated") : `switched to "${next}"`}`);
   };
 
@@ -148,6 +105,9 @@ export default function FlagsPage() {
       );
     }
     if (gifUrl) {
+      // Plain <img> on purpose. next/image sends a GIF through the optimizer,
+      // and the optimizer removes the animation.
+      // eslint-disable-next-line @next/next/no-img-element
       return <img src={gifUrl} alt="Hedgehog" className="w-32 h-32 rounded-lg object-cover" />;
     }
     return (
@@ -184,6 +144,14 @@ export default function FlagsPage() {
           </div>
           <HedgehogGif index={4} size="sm" />
         </div>
+
+        {flagsFailed && (
+          <div className="bg-error/10 border border-error/30 rounded-lg p-4 text-error text-sm">
+            PostHog never answered the flag request. An ad blocker, a privacy extension, or a network error is the
+            usual cause. Open the browser DevTools Network tab and look for the <code className="font-mono">/flags</code>{" "}
+            request.
+          </div>
+        )}
 
         {/* ── Hedgehog Feature Flags ── */}
         <section>
@@ -311,7 +279,7 @@ export default function FlagsPage() {
             {activeFlags.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {activeFlags.map(([key, value]) => {
-                  const isOverridden = overriddenKeys.has(key);
+                  const isOverridden = key in flagOverrides;
                   const valueLabel =
                     typeof value === "string" ? ` = ${value}` : value === true ? " = true" : "";
                   const tooltip = `${key}${valueLabel}${isOverridden ? " — Overridden value" : ""}`;
@@ -357,15 +325,12 @@ export default function FlagsPage() {
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={async () => {
-                    const ph = (await import("posthog-js")).default;
-                    ph.featureFlags.overrideFeatureFlags(false);
-                    clearAllOverrides();
-                    reloadFeatureFlags();
-                    addLog({ type: "flag", name: "All Flag Overrides Cleared" });
+                  onClick={() => {
+                    clearFlagOverrides();
                     showToast("All overrides cleared", "info");
                   }}
-                  className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm"
+                  disabled={Object.keys(flagOverrides).length === 0}
+                  className="py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Clear Overrides
                 </button>
@@ -390,7 +355,7 @@ export default function FlagsPage() {
                   <span className="text-center">PostHog</span>
                 </div>
                 {allFlags.map(([key, value]) => {
-                  const isOverridden = overriddenKeys.has(key);
+                  const isOverridden = key in flagOverrides;
                   return (
                     <div
                       key={key}

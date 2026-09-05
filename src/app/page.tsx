@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePosthog } from "@/contexts/PosthogContext";
 import { HedgehogBanner } from "@/components/HedgehogGif";
+import ApiHostField, { US_CLOUD_HOST } from "@/components/ApiHostField";
 
 export default function SetupPage() {
   const [apiKey, setApiKey] = useState("");
-  const [apiHost, setApiHost] = useState("https://us.i.posthog.com");
+  const [apiHost, setApiHost] = useState(US_CLOUD_HOST);
   const [isValidating, setIsValidating] = useState(false);
   const [keyError, setKeyError] = useState("");
   const { initPosthog, isInitialized, config } = usePosthog();
@@ -36,8 +37,8 @@ export default function SetupPage() {
     setIsValidating(true);
 
     try {
-      // Validate the API key by hitting the decide endpoint
-      const res = await fetch(`${host}/decide?v=3`, {
+      // Validate the API key against the flags endpoint
+      const res = await fetch(`${host}/flags/?v=2`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: key, distinct_id: "pasture-validation", groups: {} }),
@@ -59,14 +60,16 @@ export default function SetupPage() {
       }
     } catch {
       // Network error or CORS — validation blocked, proceed anyway.
-      // This is common in local dev environments where the /decide endpoint
+      // This is common in local dev environments where the /flags endpoint
       // may be blocked by CORS or a firewall. PostHog will report bad keys
       // via the SDK debug logs in the console.
     }
 
     setIsValidating(false);
-    initPosthog(key, host);
-    router.push("/login");
+    // initPosthog handles the redirect itself when it has to reload the page to
+    // point the SDK at a different project.
+    initPosthog(key, host, "/login");
+    if (!isInitialized) router.push("/login");
   };
 
   return (
@@ -95,20 +98,13 @@ export default function SetupPage() {
             <p className="text-xs text-muted mt-2">Find this in PostHog → Project Settings → Project API Key</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">API Host</label>
-            <select
-              value={apiHost}
-              onChange={(e) => {
-                setApiHost(e.target.value);
-                setKeyError("");
-              }}
-              className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            >
-              <option value="https://us.i.posthog.com">US Cloud (us.i.posthog.com)</option>
-              <option value="https://eu.i.posthog.com">EU Cloud (eu.i.posthog.com)</option>
-            </select>
-          </div>
+          <ApiHostField
+            value={apiHost}
+            onChange={(host) => {
+              setApiHost(host);
+              setKeyError("");
+            }}
+          />
 
           {keyError && (
             <div className="bg-error/10 border border-error/30 rounded-lg p-4 space-y-2">

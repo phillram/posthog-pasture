@@ -11,6 +11,9 @@ import { randomPurchaseProps } from "@/lib/purchase";
 
 import HedgehogGif from "@/components/HedgehogGif";
 
+// Upper bound on the sandbox result that goes into an event property.
+const MAX_CAPTURED_RESULT_CHARS = 500;
+
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const {
@@ -21,6 +24,7 @@ export default function DashboardPage() {
     startSessionRecording,
     stopSessionRecording,
     flagsReady,
+    flagsFailed,
     addLog,
   } = usePosthog();
   const router = useRouter();
@@ -28,6 +32,7 @@ export default function DashboardPage() {
   // JS Utilities form
   const [jsCode, setJsCode] = useState("document.title");
   const [jsResult, setJsResult] = useState("");
+  const [sendJsResult, setSendJsResult] = useState(false);
 
   // PostHog Console
   const [phCommand, setPhCommand] = useState("posthog.capture('test_event', { source: 'console' })");
@@ -64,7 +69,14 @@ export default function DashboardPage() {
       const result = new Function(`return (${jsCode})`)();
       const output = typeof result === "object" ? JSON.stringify(result, null, 2) : String(result);
       setJsResult(output);
-      captureEvent("pasture_js_executed", { code: jsCode, result: output, success: true });
+      // The result can hold anything the expression reaches, including cookies
+      // and localStorage. Send it to PostHog only when the person asks for it,
+      // and cap the length so one expression cannot write a huge property.
+      captureEvent("pasture_js_executed", {
+        code: jsCode,
+        success: true,
+        ...(sendJsResult ? { result: output.slice(0, MAX_CAPTURED_RESULT_CHARS) } : {}),
+      });
       showToast("Code executed");
     } catch (e) {
       const errMsg = (e as Error).message;
@@ -242,6 +254,13 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {flagsFailed && (
+          <div className="bg-error/10 border border-error/30 rounded-lg p-4 text-error text-sm">
+            PostHog never answered the flag request, so flag values are unavailable. Event capture still works. An ad
+            blocker or a privacy extension is the usual cause.
+          </div>
+        )}
+
         {/* Quick Events */}
         <section className="bg-card border border-border rounded-xl p-6">
           <h2 className="text-lg font-semibold text-foreground mb-4">Quick Events</h2>
@@ -281,8 +300,30 @@ export default function DashboardPage() {
           <div className="bg-card border border-cyan/30 rounded-xl p-6 mb-6">
             <h3 className="text-base font-semibold text-foreground mb-3">JavaScript Sandbox</h3>
             <p className="text-muted text-xs mb-3">
-              Run JavaScript expressions. Results are captured as events. Errors are captured as exceptions.
+              Run JavaScript expressions. Each run sends a{" "}
+              <code className="bg-input-bg px-1 rounded font-mono">pasture_js_executed</code> event with the code.
+              Errors are captured as exceptions.
             </p>
+            <div className="flex items-start gap-3 px-3 py-2.5 mb-3 bg-input-bg border border-border rounded-lg">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={sendJsResult}
+                onClick={() => setSendJsResult((v) => !v)}
+                className={`relative mt-0.5 shrink-0 w-10 h-5 rounded-full transition-colors ${sendJsResult ? "bg-warning" : "bg-muted/30"}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${sendJsResult ? "translate-x-5" : "translate-x-0"}`}
+                />
+              </button>
+              <div>
+                <p className="text-sm font-medium text-foreground">Also send the result to PostHog</p>
+                <p className="text-xs text-muted mt-0.5">
+                  Off by default. An expression can read cookies or localStorage, and the result becomes a permanent
+                  event property in your project. The first {MAX_CAPTURED_RESULT_CHARS} characters are sent.
+                </p>
+              </div>
+            </div>
             <div className="space-y-3">
               <textarea
                 value={jsCode}

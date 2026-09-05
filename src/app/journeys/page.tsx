@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosthog } from "@/contexts/PosthogContext";
@@ -13,13 +13,15 @@ import {
   generateUsername,
   buildPersonProps,
   buildProtocolMarkerEvent,
+  newSessionId,
+  flagAttributionProps,
+  simulatedPersonsUrl,
   type ProfilePreset,
 } from "@/lib/simulatedUsers";
-import { TIMING_MODES, pickSessionStart, makeTimestamper, type TimingMode } from "@/lib/timing";
+import { TIMING_MODES, planSessionTimestamps, type TimingMode } from "@/lib/timing";
+import { BatchSendError, fetchFlagsForUsers, sendEventBatch } from "@/lib/posthogIngest";
 
 // ── Constants ────────────────────────────────────────────────────────────────
-
-const DECIDE_CONCURRENCY = 6;
 
 const QUICK_USER_COUNTS = [10, 25, 50, 100, 200, 500];
 
@@ -76,15 +78,13 @@ export default function JourneysPage() {
 
   const flagNames = useMemo(() => Object.keys(featureFlags).sort(), [featureFlags]);
 
-  if (isLoading) return null;
-  if (!isAuthenticated) {
-    router.push("/login");
-    return null;
-  }
-  if (!config.apiKey) {
-    router.push("/");
-    return null;
-  }
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) router.push("/login");
+    else if (!config.apiKey) router.push("/");
+  }, [isAuthenticated, isLoading, config.apiKey, router]);
+
+  if (isLoading || !isAuthenticated || !config.apiKey) return null;
 
   // Effective flag count for the estimator + downstream emission decisions
   const effectiveFlagCount =
@@ -129,42 +129,23 @@ export default function JourneysPage() {
         username,
         flow,
         personProps: buildPersonProps(preset, username),
-        sessionStart: pickSessionStart(now, timingMode, i),
         flagsByName: {} as Record<string, boolean | string>,
       };
     });
 
-    // ── Phase 1: /decide for each user ──
-    const decideUrl = `${config.apiHost}/decide?v=3`;
-    let evaluated = 0;
-    for (let i = 0; i < userCount; i += DECIDE_CONCURRENCY) {
-      const chunk = plan.slice(i, i + DECIDE_CONCURRENCY);
-      await Promise.all(
-        chunk.map(async (entry) => {
-          try {
-            const res = await fetch(decideUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                token: config.apiKey,
-                distinct_id: entry.username,
-                groups: {},
-              }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              entry.flagsByName = data.featureFlags ?? {};
-            }
-          } catch {
-            // Leave flagsByName empty for this user
-          }
-        })
-      );
-      evaluated = Math.min(i + DECIDE_CONCURRENCY, userCount);
-      setProgress(Math.round((evaluated / userCount) * 60)); // 0–60%
-      setProgressLabel(`Evaluating flags… (${evaluated}/${userCount})`);
-      await new Promise((r) => setTimeout(r, 0));
-    }
+    // ── Phase 1: ask PostHog which flags apply to each user ──
+    setProgressLabel(`Evaluating flags… (0/${userCount})`);
+    const flagsPerUser = await fetchFlagsForUsers(
+      plan.map((entry) => entry.username),
+      config,
+      (done, total) => {
+        setProgress(Math.round((done / total) * 50)); // 0–50%
+        setProgressLabel(`Evaluating flags… (${done}/${total})`);
+      }
+    );
+    flagsPerUser.forEach((flags, i) => {
+      plan[i].flagsByName = flags;
+    });
 
     // ── Phase 2: build batch ──
     setProgressLabel("Building event batch…");
@@ -178,12 +159,33 @@ export default function JourneysPage() {
 
     for (let i = 0; i < userCount; i++) {
       const entry = plan[i];
-      const { username, flow, personProps, sessionStart, flagsByName } = entry;
-      const tsAt = makeTimestamper(sessionStart, timingMode);
+      const { username, flow, personProps, flagsByName } = entry;
+
+      // Feature flag exposures
+      const flagEntries: [string, boolean | string][] = Object.entries(flagsByName);
+      const exposedFlags =
+        flagMode === "all"
+          ? flagEntries
+          : flagToBind && flagToBind in flagsByName
+            ? [[flagToBind, flagsByName[flagToBind]] as [string, boolean | string]]
+            : [];
+
+      // $identify + the protocol marker + one event per exposed flag + the flow.
+      const plannedEventCount = 2 + exposedFlags.length + flow.steps.length;
+      const stamps = planSessionTimestamps(now, timingMode, i, plannedEventCount);
+      let stampIndex = 0;
+      const tsAt = () => stamps[stampIndex++];
+
       let eventCount = 0;
       const commonJourneyProps = {
         pasture_journey_flow: flow.id,
         pasture_journey_user_index: i,
+        // One session ID for the whole journey, so PostHog reads it as one
+        // session instead of a dozen unrelated ones.
+        $session_id: newSessionId(),
+        // $feature/<key> is what PostHog reads to attribute an event to a
+        // variant, so funnels can be broken down by flag.
+        ...flagAttributionProps(Object.fromEntries(exposedFlags)),
       };
 
       // Identify with the full profile…
@@ -206,14 +208,6 @@ export default function JourneysPage() {
       bumpCount("$set");
       eventCount++;
 
-      // Feature flag exposures
-      const flagEntries: [string, boolean | string][] = Object.entries(flagsByName);
-      const exposedFlags =
-        flagMode === "all"
-          ? flagEntries
-          : flagToBind && flagToBind in flagsByName
-            ? [[flagToBind, flagsByName[flagToBind]] as [string, boolean | string]]
-            : [];
 
       for (const [flagName, flagValue] of exposedFlags) {
         batchEvents.push({
@@ -256,26 +250,23 @@ export default function JourneysPage() {
       });
     }
 
-    setProgress(80);
-    setProgressLabel("Sending batch to PostHog…");
+    setProgress(55);
+    setProgressLabel(`Sending ${batchEvents.length} events to PostHog…`);
     await new Promise((r) => setTimeout(r, 0));
 
-    // ── Phase 3: send batch ──
+    // ── Phase 3: send the events, in chunks ──
     try {
-      const res = await fetch(`${config.apiHost}/batch/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          api_key: config.apiKey,
-          batch: batchEvents,
-          sent_at: new Date().toISOString(),
-        }),
+      await sendEventBatch(batchEvents, config, (sent, total) => {
+        setProgress(55 + Math.round((sent / total) * 45));
+        setProgressLabel(`Sending events to PostHog… (${sent}/${total})`);
       });
-      if (!res.ok) {
-        setRunError(`PostHog returned HTTP ${res.status}. Check your API key and host.`);
-      }
     } catch (err) {
-      setRunError(`Network error sending batch: ${(err as Error).message}`);
+      const failure = err as BatchSendError;
+      setRunError(
+        failure.sentEvents > 0
+          ? `${failure.message}. ${failure.sentEvents} of ${failure.totalEvents} events reached PostHog.`
+          : failure.message
+      );
     }
 
     setProgress(100);
@@ -312,10 +303,9 @@ export default function JourneysPage() {
   };
 
   // ── PostHog persons URL ──
-  const posthogHost = config.apiHost.includes("eu.")
-    ? "https://eu.posthog.com"
-    : "https://us.posthog.com";
-  const personsUrl = `${posthogHost}/persons`;
+  // Filtered to pasture_journey, so the link doubles as the way to find and
+  // remove the persons a run created.
+  const personsUrl = simulatedPersonsUrl(config.apiHost, "pasture_journey");
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -742,7 +732,7 @@ export default function JourneysPage() {
                   rel="noopener noreferrer"
                   className="py-2 px-4 bg-brown/20 hover:bg-brown/30 text-brown-hover font-medium rounded-lg transition-colors text-xs"
                 >
-                  View persons in PostHog →
+                  View these persons in PostHog →
                 </a>
               </div>
               <div className="overflow-x-auto max-h-[480px] overflow-y-auto">

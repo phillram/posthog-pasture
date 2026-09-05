@@ -17,7 +17,7 @@ interface PosthogContextType {
   isInitialized: boolean;
   eventLog: EventLogEntry[];
   localPersonProperties: Record<string, unknown>;
-  initPosthog: (apiKey: string, apiHost?: string) => void;
+  initPosthog: (apiKey: string, apiHost?: string, redirectTo?: string) => void;
   updateConfig: (updates: Partial<PosthogConfig>) => void;
   resetConfig: () => void;
   captureEvent: (eventName: string, properties?: Record<string, unknown>) => void;
@@ -40,9 +40,13 @@ interface PosthogContextType {
   isOptedOut: boolean;
   featureFlags: Record<string, boolean | string>;
   flagsReady: boolean;
+  flagsFailed: boolean;
   reloadFeatureFlags: () => void;
   reloadFeatureFlagsAndCapture: () => void;
   armFlagsReadyLog: () => void;
+  flagOverrides: Record<string, boolean | string>;
+  setFlagOverride: (key: string, value: boolean | string) => void;
+  clearFlagOverrides: () => void;
   startSessionRecording: () => void;
   stopSessionRecording: () => void;
   isRecording: boolean;
@@ -71,6 +75,22 @@ const defaultConfig: PosthogConfig = {
 
 const PosthogContext = createContext<PosthogContextType | null>(null);
 
+// posthog-js keeps client-side flag overrides in its own persistence store
+// under this key. Reading it back is what lets the UI survive a page reload
+// without a second, drifting copy of the same state.
+const OVERRIDE_PERSISTENCE_KEY = "$override_feature_flags";
+
+function readStoredFlagOverrides(): Record<string, boolean | string> {
+  const props = (posthog as unknown as { persistence?: { props?: Record<string, unknown> } }).persistence?.props;
+  const stored = props?.[OVERRIDE_PERSISTENCE_KEY];
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) return {};
+  const result: Record<string, boolean | string> = {};
+  for (const [key, value] of Object.entries(stored as Record<string, unknown>)) {
+    if (typeof value === "boolean" || typeof value === "string") result[key] = value;
+  }
+  return result;
+}
+
 export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<PosthogConfig>(defaultConfig);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -79,6 +99,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [isOptedOut, setIsOptedOut] = useState(false);
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean | string>>({});
   const [flagsReady, setFlagsReady] = useState(false);
+  const [flagsFailed, setFlagsFailed] = useState(false);
+  const [flagOverrides, setFlagOverrides] = useState<Record<string, boolean | string>>({});
   const [isRecording, setIsRecording] = useState(false);
   const [lastRequestError, setLastRequestError] = useState<{
     status: number;
@@ -86,6 +108,11 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     at: number;
   } | null>(null);
   const initRef = useRef(false);
+  // The key + host the running SDK instance actually uses. posthog-js ignores a
+  // second init() call, so this is the only reliable record of which project
+  // events are going to. initPosthog compares against it to decide whether a
+  // page reload is needed.
+  const activeConnectionRef = useRef<{ apiKey: string; apiHost: string } | null>(null);
   // When true, the next onFeatureFlags callback will fire $feature_flag_called for each flag
   const fireFlagEventsRef = useRef(false);
   // When true, the next onFeatureFlags callback will log a "Feature Flags
@@ -230,6 +257,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
           }
           setFeatureFlags(variants);
           setFlagsReady(true);
+          setFlagsFailed(false);
           if (flagsWatchdogRef.current) {
             clearTimeout(flagsWatchdogRef.current);
             flagsWatchdogRef.current = null;
@@ -246,6 +274,11 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       },
     });
     initRef.current = true;
+    activeConnectionRef.current = { apiKey: cfg.apiKey, apiHost: cfg.apiHost };
+    // posthog-js persists opt-out and flag overrides, so read both back rather
+    // than assuming a fresh state on every page load.
+    setIsOptedOut(posthog.has_opted_out_capturing());
+    setFlagOverrides(readStoredFlagOverrides());
     if (flagsWatchdogRef.current) clearTimeout(flagsWatchdogRef.current);
     flagsWatchdogRef.current = setTimeout(() => {
       flagsWatchdogRef.current = null;
@@ -257,6 +290,10 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         properties: { status: 0, message, host: cfg.apiHost },
       });
       setLastRequestError({ status: 0, message, at: Date.now() });
+      // Release every consumer that waits on flagsReady. A blocked /flags
+      // request must not lock the app out of the pages that explain the block.
+      setFlagsFailed(true);
+      setFlagsReady(true);
     }, FLAGS_LOAD_TIMEOUT_MS);
     if (typeof window !== "undefined") {
       (window as unknown as Record<string, unknown>).posthog = posthog;
@@ -300,21 +337,44 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   }, [runPosthogInit]);
 
   const initPosthog = useCallback(
-    (apiKey: string, apiHost?: string) => {
+    (apiKey: string, apiHost?: string, redirectTo?: string) => {
       const host = apiHost || config.apiHost || "https://us.i.posthog.com";
-      if (initRef.current) {
-        posthog.reset();
-        initRef.current = false;
+      const newConfig: PosthogConfig = { ...config, apiKey, apiHost: host };
+      localStorage.setItem("posthog_config", JSON.stringify(newConfig));
+      setConfig(newConfig);
+
+      const active = activeConnectionRef.current;
+      const sameProject = active?.apiKey === apiKey && active?.apiHost === host;
+
+      if (initRef.current && !sameProject) {
+        // posthog-js refuses a second init() on a loaded instance: it logs
+        // "Re-initializing is a no-op" and keeps the original token. reset()
+        // does not clear that flag either. A full page load is the only way to
+        // point the SDK at a different project, so do it rather than leaving
+        // the UI claiming a connection the SDK never made.
+        addLog({
+          type: "config",
+          name: "Reconnecting to a different project",
+          properties: { apiKey: `${apiKey.slice(0, 8)}...`, apiHost: host },
+        });
+        window.location.assign(redirectTo ?? window.location.pathname);
+        return;
       }
+
+      if (initRef.current) {
+        // Same project, already connected. Nothing to re-init.
+        setIsInitialized(true);
+        if (redirectTo) window.location.assign(redirectTo);
+        return;
+      }
+
       // Reset flag state so consumers don't see stale flags from the previous project
       setFlagsReady(false);
+      setFlagsFailed(false);
       setFeatureFlags({});
       // Connecting to a fresh project should announce its first ready event
       logFlagsReadyRef.current = true;
-      const newConfig: PosthogConfig = { ...config, apiKey, apiHost: host };
       runPosthogInit(newConfig);
-      setConfig(newConfig);
-      localStorage.setItem("posthog_config", JSON.stringify(newConfig));
       setIsInitialized(true);
       addLog({
         type: "config",
@@ -346,6 +406,19 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       const newConfig = { ...config, ...updates };
       setConfig(newConfig);
       localStorage.setItem("posthog_config", JSON.stringify(newConfig));
+      // Push the capture settings into the running SDK. Without this the
+      // toggles only ever changed localStorage, so autocapture, pageview
+      // capture, pageleave capture, and session recording kept the values
+      // they had at init. posthog-js reads all four live, so set_config is
+      // enough — no reconnect, no page reload.
+      if (initRef.current) {
+        posthog.set_config({
+          autocapture: newConfig.autocapture,
+          capture_pageview: newConfig.capturePageview,
+          capture_pageleave: newConfig.capturePageleave,
+          disable_session_recording: newConfig.disableSessionRecording,
+        });
+      }
       addLog({ type: "config", name: "Config Updated", properties: updates as Record<string, unknown> });
     },
     [config, addLog, initPosthog]
@@ -360,12 +433,18 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(flagsWatchdogRef.current);
       flagsWatchdogRef.current = null;
     }
+    activeConnectionRef.current = null;
     setConfig(defaultConfig);
     setIsInitialized(false);
     setFlagsReady(false);
+    setFlagsFailed(false);
     setFeatureFlags({});
+    setFlagOverrides({});
     setLocalPersonProperties({});
     setEventLog([]);
+    setIsOptedOut(false);
+    setIsRecording(false);
+    setLastRequestError(null);
     logFlagsReadyRef.current = false;
     localStorage.removeItem("posthog_config");
     localStorage.removeItem("posthog_pasture_person_props");
@@ -509,6 +588,28 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     logFlagsReadyRef.current = true;
   }, []);
 
+  // posthog-js stores the override map as one value, so every call has to send
+  // the complete map. Sending a single key wipes every other override.
+  const setFlagOverride = useCallback(
+    (key: string, value: boolean | string) => {
+      if (!isInitialized) return;
+      setFlagOverrides((prev) => {
+        const next = { ...prev, [key]: value };
+        posthog.featureFlags.overrideFeatureFlags({ flags: next });
+        return next;
+      });
+      addLog({ type: "flag", name: `Flag Override: ${key}`, properties: { flag: key, value } });
+    },
+    [isInitialized, addLog]
+  );
+
+  const clearFlagOverrides = useCallback(() => {
+    if (!isInitialized) return;
+    posthog.featureFlags.overrideFeatureFlags(false);
+    setFlagOverrides({});
+    addLog({ type: "flag", name: "All Flag Overrides Cleared" });
+  }, [isInitialized, addLog]);
+
   const startSessionRecording = useCallback(() => {
     if (!isInitialized) return;
     posthog.startSessionRecording();
@@ -558,9 +659,13 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         isOptedOut,
         featureFlags,
         flagsReady,
+        flagsFailed,
         reloadFeatureFlags,
         reloadFeatureFlagsAndCapture,
         armFlagsReadyLog,
+        flagOverrides,
+        setFlagOverride,
+        clearFlagOverrides,
         startSessionRecording,
         stopSessionRecording,
         isRecording,

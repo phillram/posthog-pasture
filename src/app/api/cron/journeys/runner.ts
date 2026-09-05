@@ -8,11 +8,12 @@ import {
   generateUsername,
   buildPersonProps,
   buildProtocolMarkerEvent,
+  newSessionId,
+  flagAttributionProps,
 } from "@/lib/simulatedUsers";
-import { pickSessionStart, makeTimestamper } from "@/lib/timing";
+import { planSessionTimestamps } from "@/lib/timing";
+import { fetchFlagsForUsers, sendEventBatch } from "@/lib/posthogIngest";
 import type { CronJourneyConfig } from "./config";
-
-const DECIDE_CONCURRENCY = 6;
 
 export interface CronJourneyResult {
   totalUsers: number;
@@ -44,33 +45,18 @@ export async function runJourneyCron({ apiKey, apiHost, config }: RunOptions): P
       username,
       flow,
       personProps: buildPersonProps(config.profilePreset, username),
-      sessionStart: pickSessionStart(now, config.timingMode, i),
       flagsByName: {} as Record<string, boolean | string>,
     };
   });
 
-  // Phase 1: /decide per user (small concurrency to be polite to PostHog)
-  const decideUrl = `${apiHost}/decide?v=3`;
-  for (let i = 0; i < plan.length; i += DECIDE_CONCURRENCY) {
-    const chunk = plan.slice(i, i + DECIDE_CONCURRENCY);
-    await Promise.all(
-      chunk.map(async (entry) => {
-        try {
-          const res = await fetch(decideUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: apiKey, distinct_id: entry.username, groups: {} }),
-          });
-          if (res.ok) {
-            const data = (await res.json()) as { featureFlags?: Record<string, boolean | string> };
-            entry.flagsByName = data.featureFlags ?? {};
-          }
-        } catch {
-          // Leave flagsByName empty for this user
-        }
-      })
-    );
-  }
+  // Phase 1: read each user's flags
+  const flagsPerUser = await fetchFlagsForUsers(
+    plan.map((entry) => entry.username),
+    { apiKey, apiHost }
+  );
+  flagsPerUser.forEach((flags, i) => {
+    plan[i].flagsByName = flags;
+  });
 
   // Phase 2: build batch
   const batchEvents: Record<string, unknown>[] = [];
@@ -82,12 +68,19 @@ export async function runJourneyCron({ apiKey, apiHost, config }: RunOptions): P
   };
 
   for (let i = 0; i < plan.length; i++) {
-    const { username, flow, personProps, sessionStart, flagsByName } = plan[i];
-    const tsAt = makeTimestamper(sessionStart, config.timingMode);
+    const { username, flow, personProps, flagsByName } = plan[i];
+    const exposedFlags = config.flagMode === "all" ? Object.entries(flagsByName) : [];
+    // $identify + the protocol marker + one event per exposed flag + the flow.
+    const eventCount = 2 + exposedFlags.length + flow.steps.length;
+    const stamps = planSessionTimestamps(now, config.timingMode, i, eventCount);
+    let stampIndex = 0;
+    const tsAt = () => stamps[stampIndex++];
     const commonJourneyProps = {
       pasture_journey_flow: flow.id,
       pasture_journey_user_index: i,
       pasture_cron: true,
+      $session_id: newSessionId(),
+      ...flagAttributionProps(Object.fromEntries(exposedFlags)),
     };
 
     flowCounts[flow.id] = (flowCounts[flow.id] ?? 0) + 1;
@@ -103,20 +96,18 @@ export async function runJourneyCron({ apiKey, apiHost, config }: RunOptions): P
     batchEvents.push(buildProtocolMarkerEvent(username, "pasture_journey", tsAt()));
     bumpEvent("$set");
 
-    if (config.flagMode === "all") {
-      for (const [flagName, flagValue] of Object.entries(flagsByName)) {
-        batchEvents.push({
-          event: "$feature_flag_called",
-          distinct_id: username,
-          timestamp: tsAt(),
-          properties: {
-            $feature_flag: flagName,
-            $feature_flag_response: flagValue,
-            ...commonJourneyProps,
-          },
-        });
-        bumpEvent("$feature_flag_called");
-      }
+    for (const [flagName, flagValue] of exposedFlags) {
+      batchEvents.push({
+        event: "$feature_flag_called",
+        distinct_id: username,
+        timestamp: tsAt(),
+        properties: {
+          $feature_flag: flagName,
+          $feature_flag_response: flagValue,
+          ...commonJourneyProps,
+        },
+      });
+      bumpEvent("$feature_flag_called");
     }
 
     for (const fStep of flow.steps) {
@@ -131,21 +122,8 @@ export async function runJourneyCron({ apiKey, apiHost, config }: RunOptions): P
     }
   }
 
-  // Phase 3: send batch
-  const res = await fetch(`${apiHost}/batch/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: apiKey,
-      batch: batchEvents,
-      sent_at: new Date().toISOString(),
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`PostHog /batch/ returned HTTP ${res.status}: ${body.slice(0, 500)}`);
-  }
+  // Phase 3: send the events, in chunks
+  await sendEventBatch(batchEvents, { apiKey, apiHost });
 
   return {
     totalUsers: plan.length,

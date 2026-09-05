@@ -5,13 +5,23 @@
 // is set in your Vercel project. We require it so random callers can't poke
 // the endpoint.
 
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { CRON_JOURNEY_CONFIG } from "./config";
 import { runJourneyCron } from "./runner";
 
 export const dynamic = "force-dynamic";
-// Journey runs can be slow when /decide is rate-limited — give them more room.
+// Journey runs can be slow when /flags is rate-limited — give them more room.
 export const maxDuration = 60;
+
+// Constant-time compare, so the response time does not tell a caller how much
+// of the secret they guessed right.
+function matchesSecret(received: string, expected: string): boolean {
+  const a = Buffer.from(received);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 export async function GET(request: Request) {
   const apiKey =
@@ -44,7 +54,7 @@ export async function GET(request: Request) {
   }
 
   const auth = request.headers.get("authorization") ?? "";
-  if (auth !== `Bearer ${cronSecret}`) {
+  if (!matchesSecret(auth, `Bearer ${cronSecret}`)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 

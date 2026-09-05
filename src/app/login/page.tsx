@@ -74,6 +74,9 @@ export default function LoginPage() {
           <div className="flex items-start gap-3 px-3 py-3 bg-input-bg border border-border rounded-lg">
             <button
               type="button"
+              role="switch"
+              aria-checked={applyFeatureFlags}
+              aria-label="Apply feature flags on login"
               onClick={() => setApplyFeatureFlags((v) => !v)}
               className={`relative mt-0.5 shrink-0 w-10 h-5 rounded-full transition-colors ${applyFeatureFlags ? "bg-primary" : "bg-muted/30"}`}
             >

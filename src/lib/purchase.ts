@@ -33,6 +33,8 @@ interface PurchaseProps {
   price: number;
   price_display: string;
   currency: "USD";
+  /** PostHog reads $revenue for revenue analytics. Same number as `price`. */
+  $revenue: number;
   [key: string]: unknown;
 }
 
@@ -50,7 +52,8 @@ function randomCents(): number {
  * Generate randomized props for a `pasture_purchase` event.
  * Item is `hedgehog_<one of 25>`, price is $0.01 – $1000.00.
  * Both `price` (number, for aggregation) and `price_display` (string, always
- * xx.yy so trailing zeros are preserved) are included.
+ * xx.yy so trailing zeros are preserved) are included, plus `$revenue` so the
+ * event shows up in PostHog's revenue analytics.
  */
 export function randomPurchaseProps(): PurchaseProps {
   const cents = randomCents();
@@ -60,5 +63,6 @@ export function randomPurchaseProps(): PurchaseProps {
     price,
     price_display: price.toFixed(2),
     currency: "USD",
+    $revenue: price,
   };
 }
