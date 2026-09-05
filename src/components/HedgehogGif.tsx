@@ -10,13 +10,16 @@ const hedgehogGifs = [
 ];
 
 interface HedgehogGifProps {
-  index?: number;
+  /** Which GIF to show. The index wraps, so any whole number works. */
+  index: number;
   size?: "sm" | "md" | "lg";
   className?: string;
 }
 
+// These stay on a plain <img>. next/image sends a GIF through the optimizer,
+// and the optimizer removes the animation.
 export default function HedgehogGif({ index, size = "md", className = "" }: HedgehogGifProps) {
-  const gifIndex = index !== undefined ? index % hedgehogGifs.length : Math.floor(Math.random() * hedgehogGifs.length);
+  const gifIndex = index % hedgehogGifs.length;
   const sizeClasses = {
     sm: "w-16 h-16",
     md: "w-32 h-32",
@@ -24,6 +27,7 @@ export default function HedgehogGif({ index, size = "md", className = "" }: Hedg
   };
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={hedgehogGifs[gifIndex]}
       alt="Cute hedgehog"
@@ -36,6 +40,7 @@ export function HedgehogBanner() {
   return (
     <div className="flex gap-3 justify-center items-center py-4 overflow-hidden">
       {hedgehogGifs.slice(0, 4).map((gif, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           key={i}
           src={gif}

@@ -207,14 +207,15 @@ export function findFlow(id: string): Flow | undefined {
 
 /**
  * Average step count across the chosen flows. Used by the configure step's
- * "≈ N events will be sent" estimator. Includes the flow's own steps plus
- * `$identify` and (estimated) one `$feature_flag_called`.
+ * "≈ N events will be sent" estimator. Includes the flow's own steps, the two
+ * events every runner adds per user, and one event per exposed flag.
  */
 export function avgEventsPerUser(selectedFlowIds: string[], flagsCount: number): number {
   if (selectedFlowIds.length === 0) return 0;
   const stepsAvg =
     selectedFlowIds.reduce((sum, id) => sum + (findFlow(id)?.steps.length ?? 0), 0) /
     selectedFlowIds.length;
-  // +1 for $identify, +flagsCount for $feature_flag_called per flag (or 0).
-  return Math.round(stepsAvg + 1 + flagsCount);
+  // +2 for $identify and the protocol marker $set, +flagsCount for one
+  // $feature_flag_called per exposed flag (or 0).
+  return Math.round(stepsAvg + 2 + flagsCount);
 }

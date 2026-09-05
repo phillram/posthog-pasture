@@ -128,7 +128,9 @@ export default function IdentifyPage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  // The profile comes from posthog-js, which is only available in the browser.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isInitialized) refreshProfile();
   }, [isInitialized, refreshProfile]);
 

@@ -34,8 +34,6 @@ const GIFS = {
   },
 };
 
-const FLAG_KEYS = ["hog-spin", "hog-dance", "hog-action"] as const;
-
 export default function FlagsPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const { featureFlags, flagsReady, reloadFeatureFlags, armFlagsReadyLog, addLog, isInitialized, config } = usePosthog();
@@ -50,6 +48,8 @@ export default function FlagsPage() {
       const raw = sessionStorage.getItem(OVERRIDES_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw);
+      // Client-only read, so it must run in an effect to stay SSR-safe.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (Array.isArray(parsed)) setOverriddenKeys(new Set(parsed.filter((x): x is string => typeof x === "string")));
     } catch {
       // ignore malformed sessionStorage entries
@@ -148,6 +148,9 @@ export default function FlagsPage() {
       );
     }
     if (gifUrl) {
+      // Plain <img> on purpose. next/image sends a GIF through the optimizer,
+      // and the optimizer removes the animation.
+      // eslint-disable-next-line @next/next/no-img-element
       return <img src={gifUrl} alt="Hedgehog" className="w-32 h-32 rounded-lg object-cover" />;
     }
     return (

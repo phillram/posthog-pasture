@@ -22,7 +22,10 @@ export default function ConfigPage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  // The context loads the saved config after mount, so the form fields have to
+  // follow it once it arrives.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setApiKey(config.apiKey);
     setApiHost(config.apiHost);
   }, [config]);
