@@ -67,20 +67,20 @@ Each page is themed in its own colour so you can see at a glance which area you'
 
 The main workspace. Two sections:
 
-- **Quick Events** — one-click buttons that fire common event types (purchase, signup, error, pageview, session recording start/stop, etc.). Hover any button for a tooltip showing what it sends.
+- **Quick Events** — one-click buttons that fire common event types (purchase, signup, error, pageview, session recording start/stop, etc.). Hover any button for a tooltip showing what it sends. Once a recording is running, "Watch This Session" opens it in PostHog's replay player.
 - **Sandboxes** — run arbitrary JavaScript in an expression sandbox, or run any PostHog SDK command from an in-page console with quick-command buttons and a reusable history. The JS sandbox sends the code you ran to PostHog. Sending the *result* is a separate toggle, off by default, because an expression can read cookies or localStorage.
 
 ### Identify
 
 A Your PostHog Profile panel at the top shows your distinct ID, device ID, and session ID, whether you're identified or anonymous, your active groups, the person properties you've set, and any super properties stored locally. Long sections collapse so the panel stays compact. A Refresh button re-reads everything, and the panel also auto-refreshes whenever you submit one of the cards below.
 
-Below the profile, manage who you are to PostHog: identify the current user with a distinct ID, reset back to anonymous, associate the user with a group (e.g. pasture or company), and set person properties on the fly. If your PostHog plan doesn't include group analytics, the Group Identify card surfaces the server's error inline.
+Below the profile, manage who you are to PostHog: identify the current user with a distinct ID, reset back to anonymous, associate the user with a group (e.g. pasture or company), and set person properties on the fly. You can also remove named person properties again, reset the group associations, and set properties that PostHog uses **only** to evaluate feature flags — those never reach the person, so you can test flag targeting without changing your data. If your PostHog plan doesn't include group analytics, the Group Identify card surfaces the server's error inline.
 
 ### Events
 
 Two sections:
 
-- **Event Tracking** — send any custom event name with freeform JSON properties, and manage super properties (register, unregister, inspect).
+- **Event Tracking** — send any custom event name with freeform JSON properties, and manage super properties (register, unregister, inspect). Session properties sit alongside them: they attach to every event the same way, but PostHog drops them when the session ends.
 - **Event Reference** — a browsable catalogue of every PostHog event type, grouped into collapsible categories. Each entry has a description, a code example, and a Fire Event button to send a live demo. Demo events are named `pasture_demo_*` so they never mix with your real event names, and the Groups entry calls `posthog.group()` rather than sending an event.
 
 ### Errors
@@ -89,7 +89,7 @@ Build and capture custom exceptions. Pick a message, error type, source file, an
 
 ### Flags
 
-Explore the feature flags from your PostHog project.
+Explore the feature flags from your PostHog project. Any flag carrying a JSON payload shows it under the flag's row.
 
 Three demo flags drive live hedgehog GIF animations — set them up in PostHog to see it in action:
 
@@ -152,8 +152,8 @@ Filter by type, search by name or properties, export with Copy JSON or Download 
 ### Config
 
 - **Connection** — view status, change API key, switch between US Cloud, EU Cloud, and a custom host, save & reconnect
-- **Capture Settings** — toggle autocapture, pageview capture, pageleave capture, session recording
-- **Privacy & Consent** — opt in / opt out of event capturing
+- **Capture Settings** — toggle autocapture, pageview capture, pageleave capture, exception autocapture, session recording
+- **Privacy & Consent** — opt in / opt out of event capturing, and read PostHog's own consent record (granted / denied / pending)
 - **Danger Zone** — reset person data (new anonymous ID) or a full reset that disconnects and clears everything
 
 > Capture Settings apply the moment you flip them. Changing the API key or host reloads the page, because posthog-js cannot repoint a loaded SDK at a different project.

@@ -35,12 +35,21 @@ interface PosthogContextType {
   capturePageview: (url?: string) => void;
   registerSuperProperties: (properties: Record<string, unknown>) => void;
   unregisterSuperProperty: (key: string) => void;
+  registerForSession: (properties: Record<string, unknown>) => void;
+  unregisterForSession: (key: string) => void;
+  setPersonPropertiesForFlags: (properties: Record<string, unknown>) => void;
+  unsetPersonProperties: (names: string[]) => void;
+  resetGroups: () => void;
   optIn: () => void;
   optOut: () => void;
   isOptedOut: boolean;
+  /** PostHog's own consent record: granted, denied, or pending. */
+  consentStatus: "granted" | "denied" | "pending";
   featureFlags: Record<string, boolean | string>;
   flagsReady: boolean;
   flagsFailed: boolean;
+  /** JSON payload attached to a flag in PostHog, or undefined if it has none. */
+  getFlagPayload: (key: string) => unknown;
   reloadFeatureFlags: () => void;
   reloadFeatureFlagsAndCapture: () => void;
   armFlagsReadyLog: () => void;
@@ -50,6 +59,10 @@ interface PosthogContextType {
   startSessionRecording: () => void;
   stopSessionRecording: () => void;
   isRecording: boolean;
+  /** Deep link to the current session in PostHog, or null before one starts. */
+  getSessionReplayUrl: () => string | null;
+  exceptionAutocapture: boolean;
+  setExceptionAutocapture: (enabled: boolean) => void;
   addLog: (entry: { type: EventLogEntry["type"]; name: string; properties?: Record<string, unknown> }) => void;
   clearEventLog: () => void;
   lastRequestError: { status: number; message: string; at: number } | null;
@@ -97,6 +110,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
   const [localPersonProperties, setLocalPersonProperties] = useState<Record<string, unknown>>({});
   const [isOptedOut, setIsOptedOut] = useState(false);
+  const [consentStatus, setConsentStatus] = useState<"granted" | "denied" | "pending">("pending");
+  // capture_exceptions is on at init, so this mirrors that until it is toggled.
+  const [exceptionAutocapture, setExceptionAutocaptureState] = useState(true);
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean | string>>({});
   const [flagsReady, setFlagsReady] = useState(false);
   const [flagsFailed, setFlagsFailed] = useState(false);
@@ -278,6 +294,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     // posthog-js persists opt-out and flag overrides, so read both back rather
     // than assuming a fresh state on every page load.
     setIsOptedOut(posthog.has_opted_out_capturing());
+    setConsentStatus(posthog.get_explicit_consent_status());
     setFlagOverrides(readStoredFlagOverrides());
     if (flagsWatchdogRef.current) clearTimeout(flagsWatchdogRef.current);
     flagsWatchdogRef.current = setTimeout(() => {
@@ -443,6 +460,8 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     setLocalPersonProperties({});
     setEventLog([]);
     setIsOptedOut(false);
+    setConsentStatus("pending");
+    setExceptionAutocaptureState(true);
     setIsRecording(false);
     setLastRequestError(null);
     logFlagsReadyRef.current = false;
@@ -555,17 +574,97 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     [isInitialized, addLog]
   );
 
+  // Session-scoped super properties. Unlike register(), these clear when the
+  // session ends, which is what you want for "campaign this visit came from".
+  const registerForSession = useCallback(
+    (properties: Record<string, unknown>) => {
+      if (!isInitialized) return;
+      posthog.register_for_session(properties);
+      addLog({ type: "config", name: "Session Properties Registered", properties });
+    },
+    [isInitialized, addLog]
+  );
+
+  const unregisterForSession = useCallback(
+    (key: string) => {
+      if (!isInitialized) return;
+      posthog.unregister_for_session(key);
+      addLog({ type: "config", name: `Session Property Removed: ${key}` });
+    },
+    [isInitialized, addLog]
+  );
+
+  // Properties used only to evaluate flags. They never become person
+  // properties, so they are the way to test targeting without writing to the
+  // person. The second argument reloads flags so the effect is visible.
+  const setPersonPropertiesForFlags = useCallback(
+    (properties: Record<string, unknown>) => {
+      if (!isInitialized) return;
+      posthog.setPersonPropertiesForFlags(properties, true);
+      addLog({ type: "flag", name: "Flag Person Properties Set", properties });
+    },
+    [isInitialized, addLog]
+  );
+
+  const unsetPersonProperties = useCallback(
+    (names: string[]) => {
+      if (!isInitialized || names.length === 0) return;
+      posthog.unsetPersonProperties(names);
+      setLocalPersonProperties((prev) => {
+        const next = { ...prev };
+        for (const name of names) delete next[name];
+        localStorage.setItem("posthog_pasture_person_props", JSON.stringify(next));
+        return next;
+      });
+      addLog({ type: "person", name: "Person Properties Unset", properties: { names } });
+    },
+    [isInitialized, addLog]
+  );
+
+  const resetGroups = useCallback(() => {
+    if (!isInitialized) return;
+    posthog.resetGroups();
+    addLog({ type: "group", name: "Groups Reset" });
+  }, [isInitialized, addLog]);
+
+  const getFlagPayload = useCallback(
+    (key: string) => {
+      if (!isInitialized) return undefined;
+      return posthog.getFeatureFlagPayload(key);
+    },
+    [isInitialized]
+  );
+
+  const getSessionReplayUrl = useCallback(() => {
+    if (!isInitialized) return null;
+    // Returns an empty string until a recording has started.
+    return posthog.get_session_replay_url({ withTimestamp: true }) || null;
+  }, [isInitialized]);
+
+  const setExceptionAutocapture = useCallback(
+    (enabled: boolean) => {
+      if (!isInitialized) return;
+      if (enabled) posthog.startExceptionAutocapture();
+      else posthog.stopExceptionAutocapture();
+      setExceptionAutocaptureState(enabled);
+      addLog({ type: "config", name: `Exception Autocapture ${enabled ? "Started" : "Stopped"}` });
+    },
+    [isInitialized, addLog]
+  );
+
   const optIn = useCallback(() => {
     if (!isInitialized) return;
     // Fires a $opt_in event which the before_send hook already logs.
     posthog.opt_in_capturing();
     setIsOptedOut(false);
+    setConsentStatus(posthog.get_explicit_consent_status());
   }, [isInitialized]);
 
   const optOut = useCallback(() => {
     if (!isInitialized) return;
     posthog.opt_out_capturing();
     setIsOptedOut(true);
+    setConsentStatus(posthog.get_explicit_consent_status());
     addLog({ type: "config", name: "Opted Out" });
   }, [isInitialized, addLog]);
 
@@ -654,12 +753,19 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         capturePageview,
         registerSuperProperties,
         unregisterSuperProperty,
+        registerForSession,
+        unregisterForSession,
+        setPersonPropertiesForFlags,
+        unsetPersonProperties,
+        resetGroups,
         optIn,
         optOut,
         isOptedOut,
+        consentStatus,
         featureFlags,
         flagsReady,
         flagsFailed,
+        getFlagPayload,
         reloadFeatureFlags,
         reloadFeatureFlagsAndCapture,
         armFlagsReadyLog,
@@ -669,6 +775,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         startSessionRecording,
         stopSessionRecording,
         isRecording,
+        getSessionReplayUrl,
+        exceptionAutocapture,
+        setExceptionAutocapture,
         addLog,
         clearEventLog,
         lastRequestError,

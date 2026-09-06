@@ -23,6 +23,7 @@ export default function DashboardPage() {
     capturePageview,
     startSessionRecording,
     stopSessionRecording,
+    getSessionReplayUrl,
     flagsReady,
     flagsFailed,
     addLog,
@@ -194,6 +195,7 @@ export default function DashboardPage() {
       events: [
         { name: "Start Recording", event: "__start_recording", props: {}, color: "bg-success/60 hover:bg-success/80" },
         { name: "Stop Recording", event: "__stop_recording", props: {}, color: "bg-success/20 hover:bg-success/40" },
+        { name: "Watch This Session", event: "__replay_url", props: {}, color: "bg-success/20 hover:bg-success/40" },
       ],
     },
   ];
@@ -203,6 +205,8 @@ export default function DashboardPage() {
       return "Captures a $pageview event for the current URL via posthog.capture('$pageview')";
     if (qe.event === "__start_recording") return "Starts session recording via posthog.startSessionRecording()";
     if (qe.event === "__stop_recording") return "Stops session recording via posthog.stopSessionRecording()";
+    if (qe.event === "__replay_url")
+      return "Opens the current session in PostHog's replay player via posthog.get_session_replay_url()";
     const { __use_capture_exception, ...displayProps } = qe.props;
     void __use_capture_exception;
     return `Event: ${qe.event}\n${JSON.stringify(displayProps, null, 2)}`;
@@ -218,6 +222,14 @@ export default function DashboardPage() {
     } else if (qe.event === "__stop_recording") {
       stopSessionRecording();
       showToast("Session recording stopped", "info");
+    } else if (qe.event === "__replay_url") {
+      // Empty until a recording has actually started.
+      const url = getSessionReplayUrl();
+      if (!url) {
+        showToast("No recording yet. Start one first.", "error");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
     } else if ("__use_capture_exception" in qe.props) {
       captureException({ message: qe.props.message as string, type: qe.props.type as string, source: "Quick Events" });
       showToast(`"${qe.name}" sent`);

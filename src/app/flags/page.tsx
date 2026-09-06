@@ -45,6 +45,7 @@ export default function FlagsPage() {
     flagOverrides,
     setFlagOverride,
     clearFlagOverrides,
+    getFlagPayload,
   } = usePosthog();
   const router = useRouter();
 
@@ -356,15 +357,19 @@ export default function FlagsPage() {
                 </div>
                 {allFlags.map(([key, value]) => {
                   const isOverridden = key in flagOverrides;
+                  // A flag can carry a JSON payload in PostHog. It is a
+                  // separate call from the flag value, so it needs showing.
+                  const payload = getFlagPayload(key);
                   return (
                     <div
                       key={key}
-                      className={`grid grid-cols-[1fr_7rem_6rem_5rem] items-center gap-4 px-4 py-2.5 rounded-lg ${
+                      className={`rounded-lg ${
                         isOverridden
                           ? "bg-warning/5 border border-dashed border-warning/40"
                           : "bg-input-bg border border-border"
                       }`}
                     >
+                    <div className="grid grid-cols-[1fr_7rem_6rem_5rem] items-center gap-4 px-4 py-2.5">
                       <code className="text-sm font-mono text-foreground truncate">{key}</code>
                       <span
                         title={
@@ -406,6 +411,17 @@ export default function FlagsPage() {
                           <path d="M7 17L17 7M17 7H8M17 7V16" />
                         </svg>
                       </a>
+                    </div>
+                      {payload !== undefined && payload !== null && (
+                        <div className="px-4 pb-3">
+                          <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted mb-1">
+                            Payload
+                          </p>
+                          <pre className="text-xs font-mono text-foreground/80 bg-background/60 border border-border rounded p-2 overflow-x-auto">
+                            {JSON.stringify(payload, null, 2)}
+                          </pre>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

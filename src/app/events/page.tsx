@@ -265,6 +265,8 @@ export default function EventsPage() {
     groupIdentify,
     registerSuperProperties,
     unregisterSuperProperty,
+    registerForSession,
+    unregisterForSession,
     addLog,
     isInitialized,
   } = usePosthog();
@@ -282,6 +284,8 @@ export default function EventsPage() {
 
   // Super properties form
   const [superProps, setSuperProps] = useState('{"app_version": "1.0.0"}');
+  const [sessionProps, setSessionProps] = useState('{ "campaign": "spring_hogs" }');
+  const [sessionKeyToRemove, setSessionKeyToRemove] = useState("");
   const [superKeyToRemove, setSuperKeyToRemove] = useState("");
   const [activeSuperProps, setActiveSuperProps] = useState<Record<string, unknown> | null>(null);
 
@@ -440,6 +444,57 @@ export default function EventsPage() {
                   >
                     Unregister
                   </button>
+                </div>
+                <div className="pt-3 border-t border-border/50 space-y-3">
+                  <p className="text-muted text-xs">
+                    Session properties work the same way, but PostHog drops them when the session ends. Use them for
+                    things that describe one visit rather than the person.
+                  </p>
+                  <textarea
+                    value={sessionProps}
+                    onChange={(e) => setSessionProps(e.target.value)}
+                    rows={2}
+                    aria-label="Session properties"
+                    className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      let parsed: Record<string, unknown>;
+                      try {
+                        parsed = JSON.parse(sessionProps);
+                      } catch {
+                        showToast("Invalid JSON", "error");
+                        return;
+                      }
+                      registerForSession(parsed);
+                      showToast("Session properties registered");
+                    }}
+                    className="w-full py-2.5 px-4 bg-primary/15 hover:bg-primary/25 text-primary font-medium rounded-lg transition-colors text-sm"
+                  >
+                    Register For This Session
+                  </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={sessionKeyToRemove}
+                      onChange={(e) => setSessionKeyToRemove(e.target.value)}
+                      placeholder="key_to_remove"
+                      aria-label="Session property to remove"
+                      className="flex-1 min-w-0 px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-error text-sm font-mono"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!sessionKeyToRemove.trim()) return;
+                        unregisterForSession(sessionKeyToRemove.trim());
+                        showToast(`Session property "${sessionKeyToRemove.trim()}" removed`, "info");
+                        setSessionKeyToRemove("");
+                      }}
+                      disabled={!sessionKeyToRemove.trim()}
+                      className="shrink-0 py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Unregister Session
+                    </button>
+                  </div>
                 </div>
                 <button
                   onClick={async () => {
