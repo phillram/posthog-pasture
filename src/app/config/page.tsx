@@ -10,8 +10,20 @@ import ApiHostField, { US_CLOUD_HOST } from "@/components/ApiHostField";
 
 export default function ConfigPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { config, isInitialized, updateConfig, resetConfig, initPosthog, resetPerson, optIn, optOut, isOptedOut } =
-    usePosthog();
+  const {
+    config,
+    isInitialized,
+    updateConfig,
+    resetConfig,
+    initPosthog,
+    resetPerson,
+    optIn,
+    optOut,
+    isOptedOut,
+    consentStatus,
+    exceptionAutocapture,
+    setExceptionAutocapture,
+  } = usePosthog();
   const router = useRouter();
 
   const [apiKey, setApiKey] = useState(config.apiKey);
@@ -141,6 +153,25 @@ export default function ConfigPage() {
 
           <div className="flex items-center justify-between py-2 border-b border-border/50">
             <div>
+              <span className="text-sm font-medium text-foreground">Capture Exceptions</span>
+              <p className="text-xs text-muted">Automatically capture uncaught errors and unhandled rejections</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={exceptionAutocapture}
+              aria-label="Capture exceptions"
+              onClick={() => setExceptionAutocapture(!exceptionAutocapture)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${exceptionAutocapture ? "bg-success" : "bg-muted/30"}`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${exceptionAutocapture ? "translate-x-5" : "translate-x-0"}`}
+              />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
+            <div>
               <span className="text-sm font-medium text-foreground">Disable Session Recording</span>
               <p className="text-xs text-muted">Prevent session recording from starting</p>
             </div>
@@ -168,6 +199,11 @@ export default function ConfigPage() {
               {isOptedOut ? "Opted Out — events are NOT being captured" : "Opted In — events are being captured"}
             </span>
           </div>
+          <p className="text-xs text-muted">
+            PostHog records consent separately from the opt-out flag. It reads{" "}
+            <span className="font-mono text-foreground">{consentStatus}</span> right now — &quot;pending&quot; until
+            someone chooses.
+          </p>
           <div className="flex gap-3">
             <button
               onClick={optIn}

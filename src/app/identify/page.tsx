@@ -75,6 +75,9 @@ export default function IdentifyPage() {
     resetPerson,
     setPersonProperties,
     groupIdentify,
+    resetGroups,
+    unsetPersonProperties,
+    setPersonPropertiesForFlags,
     lastRequestError,
     localPersonProperties,
   } = usePosthog();
@@ -89,6 +92,9 @@ export default function IdentifyPage() {
   const [personProps, setPersonProps] = useState(
     '{\n    "favorite_hedgehog": "max",\n    "pasture_size": "large",\n    "spines": "9001"\n}'
   );
+
+  const [propsToUnset, setPropsToUnset] = useState("");
+  const [flagProps, setFlagProps] = useState('{\n    "plan": "enterprise"\n}');
 
   const [groupError, setGroupError] = useState<{ status: number; message: string } | null>(null);
   const groupSubmitAtRef = useRef<number>(0);
@@ -166,6 +172,36 @@ export default function IdentifyPage() {
     groupIdentify(groupType.trim(), groupKey.trim());
     showToast(`Group "${groupType.trim()}/${groupKey.trim()}" set`);
     refreshProfile();
+  };
+
+  const handleResetGroups = () => {
+    resetGroups();
+    showToast("Groups reset", "info");
+    refreshProfile();
+  };
+
+  const handleUnsetProps = () => {
+    const names = propsToUnset
+      .split(",")
+      .map((n) => n.trim())
+      .filter(Boolean);
+    if (names.length === 0) return;
+    unsetPersonProperties(names);
+    showToast(`Unset ${names.length} propert${names.length === 1 ? "y" : "ies"}`);
+    setPropsToUnset("");
+    refreshProfile();
+  };
+
+  const handleFlagProps = () => {
+    let props: Record<string, unknown>;
+    try {
+      props = JSON.parse(flagProps);
+    } catch {
+      showToast("Invalid JSON", "error");
+      return;
+    }
+    setPersonPropertiesForFlags(props);
+    showToast("Flag properties set, flags reloaded");
   };
 
   const handlePersonProps = () => {
@@ -351,6 +387,12 @@ export default function IdentifyPage() {
                 >
                   Group Identify
                 </button>
+                <button
+                  onClick={handleResetGroups}
+                  className="w-full py-2.5 px-4 bg-accent/15 hover:bg-accent/25 text-accent font-medium rounded-lg transition-colors text-sm"
+                >
+                  Reset Groups
+                </button>
                 {groupError && (
                   <div className="bg-error/10 border border-error/30 rounded-lg p-3 text-error text-xs">
                     <div className="flex items-start justify-between gap-2">
@@ -393,6 +435,52 @@ export default function IdentifyPage() {
                   className="w-full py-2.5 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors text-sm"
                 >
                   Set Person Properties
+                </button>
+                <div className="pt-3 border-t border-border/50">
+                  <label htmlFor="unset-props" className="block text-xs text-muted mb-2">
+                    Remove properties from the person. Separate names with commas.
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="unset-props"
+                      type="text"
+                      value={propsToUnset}
+                      onChange={(e) => setPropsToUnset(e.target.value)}
+                      placeholder="favorite_hedgehog, spines"
+                      className="flex-1 min-w-0 px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
+                    />
+                    <button
+                      onClick={handleUnsetProps}
+                      disabled={!propsToUnset.trim()}
+                      className="shrink-0 py-2.5 px-4 bg-error/20 hover:bg-error/30 text-error font-medium rounded-lg transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Unset
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Flag-only person properties */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-base font-semibold text-foreground mb-3">Properties for flag evaluation</h3>
+              <p className="text-muted text-xs mb-3">
+                Test how flag targeting reacts to a property without writing that property to the person. PostHog uses
+                these to evaluate flags only, and reloads the flags right away.
+              </p>
+              <div className="space-y-3">
+                <textarea
+                  value={flagProps}
+                  onChange={(e) => setFlagProps(e.target.value)}
+                  rows={4}
+                  aria-label="Properties for flag evaluation"
+                  className="w-full px-4 py-2.5 bg-input-bg border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent text-sm font-mono"
+                />
+                <button
+                  onClick={handleFlagProps}
+                  className="w-full py-2.5 bg-accent/15 hover:bg-accent/25 text-accent font-medium rounded-lg transition-colors text-sm"
+                >
+                  Set & Reload Flags
                 </button>
               </div>
             </div>
