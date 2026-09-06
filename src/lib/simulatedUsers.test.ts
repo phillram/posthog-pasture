@@ -48,4 +48,18 @@ describe("buildProtocolMarkerEvent", () => {
       properties: { $set: { pasture_journey: true } },
     });
   });
+
+  it("carries the caller's shared props, so it stays inside the user's session", () => {
+    // Without them this one event has no $session_id while every other event
+    // of the same user has one, which splits the run across two sessions.
+    const event = buildProtocolMarkerEvent("u", "pasture_journey", "2026-01-01T00:00:00.000Z", {
+      $session_id: "sess-1",
+      pasture_journey_flow: "shopper",
+    });
+    expect(event.properties).toEqual({
+      $set: { pasture_journey: true },
+      $session_id: "sess-1",
+      pasture_journey_flow: "shopper",
+    });
+  });
 });

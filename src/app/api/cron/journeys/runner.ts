@@ -93,7 +93,7 @@ export async function runJourneyCron({ apiKey, apiHost, config }: RunOptions): P
     });
     bumpEvent("$identify");
 
-    batchEvents.push(buildProtocolMarkerEvent(username, "pasture_journey", tsAt()));
+    batchEvents.push(buildProtocolMarkerEvent(username, "pasture_journey", tsAt(), commonJourneyProps));
     bumpEvent("$set");
 
     for (const [flagName, flagValue] of exposedFlags) {

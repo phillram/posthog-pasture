@@ -283,7 +283,8 @@ export type PastureProtocol = "pasture_experiment" | "pasture_journey";
 export function buildProtocolMarkerEvent(
   username: string,
   protocol: PastureProtocol,
-  timestamp: string
+  timestamp: string,
+  sharedProps: Record<string, unknown> = {}
 ): Record<string, unknown> {
   return {
     event: "$set",
@@ -291,6 +292,9 @@ export function buildProtocolMarkerEvent(
     timestamp,
     properties: {
       $set: { [protocol]: true },
+      // The caller's shared props carry $session_id. Without them this one
+      // event falls outside the user's session while the rest sit inside it.
+      ...sharedProps,
     },
   };
 }

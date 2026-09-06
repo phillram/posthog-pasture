@@ -204,7 +204,7 @@ export default function JourneysPage() {
       // …then append the protocol marker as its own `$set` event so the
       // "this user came from the Journeys page" tag is decoupled from the
       // shared person-profile shape.
-      batchEvents.push(buildProtocolMarkerEvent(username, "pasture_journey", tsAt()));
+      batchEvents.push(buildProtocolMarkerEvent(username, "pasture_journey", tsAt(), commonJourneyProps));
       bumpCount("$set");
       eventCount++;
 
